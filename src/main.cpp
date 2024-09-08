@@ -1,6 +1,7 @@
 
 #include "common.h"
 #include "chunk.h"
+#include "compiler.h"
 #include "debug.h"
 #include "vm.h"
 
@@ -15,6 +16,12 @@
 
 
 InterpretResult interpret(VM* vm, const char* src) {
+    Chunk chunk;
+
+    bool ok = compile(src, &chunk);
+    if (!ok)
+        return INTERPRET_COMPILE_ERROR;
+
     return INTERPRET_OK;
 }
 

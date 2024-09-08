@@ -80,4 +80,5 @@ private:
     const char* start;
     const char* current;
     int line;
+    int token_line;
 };

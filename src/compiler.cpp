@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-void compile(const char* src) {
+bool compile(const char* src, Chunk* chunk) {
     Lexer lexer(src);
 
     int line = -1;
@@ -17,6 +17,7 @@ void compile(const char* src) {
         }
         printf("%2d '%.*s'\n", token.type, token.length, token.start);
 
-        if (token.type == TOKEN_EOF) break;
+        if (token.type == TOKEN_ERROR) return false;
+        if (token.type == TOKEN_EOF) return true;
     }
 }

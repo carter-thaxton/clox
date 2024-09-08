@@ -5,6 +5,7 @@ Lexer::Lexer(const char* src) {
     this->start = src;
     this->current = src;
     this->line = 1;
+    this->token_line = 1;
 }
 
 Lexer::~Lexer() {
@@ -24,6 +25,7 @@ Token Lexer::next_token() {
     skip_whitespace();
 
     this->start = this->current;
+    this->token_line = this->line;
 
     if (at_eof())
         return make_token(TOKEN_EOF);
@@ -65,7 +67,7 @@ Token Lexer::make_token(TokenType type) {
     token.type = type;
     token.start = this->start;
     token.length = (int) (this->current - this->start);
-    token.line = this->line;
+    token.line = this->token_line;
     return token;
 }
 
@@ -74,12 +76,12 @@ Token Lexer::error_token(const char* msg) {
     token.type = TOKEN_ERROR;
     token.start = msg;
     token.length = strlen(msg);
-    token.line = this->line;
+    token.line = this->token_line;
     return token;
 }
 
 bool Lexer::at_eof() {
-    return this->current == '\0';
+    return *this->current == '\0';
 }
 
 char Lexer::peek() {
