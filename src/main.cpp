@@ -86,16 +86,14 @@ void run_file(const char* path) {
 
 int main(int argc, const char* argv[]) {
     Chunk chunk;
-    Chunk_init(&chunk);
 
     for (int i=0; i < 300; i++) {
-        Chunk_write_constant(&chunk, i * 2.0, 123 + (i / 10));
+        chunk.write_constant(i * 2.0, 123 + (i / 10));
     }
 
-    Chunk_write(&chunk, OP_RETURN, 123);
+    chunk.write(OP_RETURN, 123);
 
-    Chunk_disassemble(&chunk, "test chunk");
-    Chunk_free(&chunk);
+    chunk.disassemble("test chunk");
     return 0;
 
     if (argc == 1) {

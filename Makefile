@@ -1,10 +1,8 @@
 
 TARGET_NAME	:= clox
 
-CC			= gcc
-CXX 		= gcc
-CFLAGS 		:= -g -O2
-CXXFLAGS 	:=
+CC       := g++
+CFLAGS   := -g -O2
 
 COBJFLAGS	:= $(CFLAGS) -c
 

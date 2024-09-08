@@ -11,7 +11,8 @@ static int print_constant_inst(const char* name, Chunk* chunk, int offset) {
     uint8_t constant = chunk->code[offset + 1];
 
     printf("%-16s %4d '", name, constant);
-    Value_print(chunk->constants.values[constant]);
+    Value val = chunk->constants.values[constant];
+    Value_print(val);
     printf("'\n");
 
     return offset + 2;
@@ -29,30 +30,30 @@ static int print_constant_long_inst(const char* name, Chunk* chunk, int offset) 
     return offset + 4;
 }
 
-void Chunk_disassemble(Chunk *chunk, const char* name) {
+void Chunk::disassemble(const char* name) {
     printf("== %s ==\n", name);
 
-    for (int offset = 0; offset < chunk->length; ) {
-        offset = Chunk_disassemble_instruction(chunk, offset);
+    for (int offset = 0; offset < this->length; ) {
+        offset = this->disassemble_instruction(offset);
     }
 }
 
-int Chunk_disassemble_instruction(Chunk *chunk, int offset) {
+int Chunk::disassemble_instruction(int offset) {
     printf("%04d ", offset);
 
-    if (offset > 0 && chunk->lines[offset] == chunk->lines[offset-1]) {
+    if (offset > 0 && this->lines[offset] == this->lines[offset-1]) {
         printf("   | ");
     } else {
-        printf("%4d ", chunk->lines[offset]);
+        printf("%4d ", this->lines[offset]);
     }
 
-    uint8_t inst = chunk->code[offset];
+    uint8_t inst = this->code[offset];
 
     switch (inst) {
     case OP_CONSTANT:
-        return print_constant_inst("OP_CONSTANT", chunk, offset);
+        return print_constant_inst("OP_CONSTANT", this, offset);
     case OP_CONSTANT_LONG:
-        return print_constant_long_inst("OP_CONSTANT_LONG", chunk, offset);
+        return print_constant_long_inst("OP_CONSTANT_LONG", this, offset);
     case OP_RETURN:
         return print_simple_inst("OP_RETURN", offset);
     default:

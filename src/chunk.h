@@ -9,16 +9,21 @@ typedef enum {
     OP_RETURN,
 } OpCode;
 
-typedef struct {
+struct Chunk {
+    Chunk();
+    ~Chunk();
+
+    void write(uint8_t byte, int line);
+    int write_constant(Value value, int line);
+
+    int add_constant(Value value);
+
+    void disassemble(const char* name);
+    int disassemble_instruction(int offset);
+
     uint8_t* code;
     int* lines;
     int capacity;
     int length;
     ValueArray constants;
-} Chunk;
-
-void Chunk_init(Chunk* chunk);
-void Chunk_free(Chunk* chunk);
-void Chunk_write(Chunk* chunk, uint8_t byte, int line);
-int Chunk_add_constant(Chunk* chunk, Value value);
-int Chunk_write_constant(Chunk* chunk, Value value, int line);
+};

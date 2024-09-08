@@ -3,13 +3,15 @@
 #include "common.h"
 
 typedef double Value;
+void Value_print(Value value);  // TODO: change once Value is a class
 
-typedef struct {
+struct ValueArray {
+    ValueArray();
+    ~ValueArray();
+
+    void write(Value value);
+
     Value* values;
     int capacity;
     int length;
-} ValueArray;
-
-void ValueArray_init(ValueArray* array);
-void ValueArray_free(ValueArray* array);
-void ValueArray_write(ValueArray* array, Value value);
+};
