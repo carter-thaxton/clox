@@ -87,7 +87,13 @@ void run_file(const char* path) {
 int main(int argc, const char* argv[]) {
     Chunk chunk;
     Chunk_init(&chunk);
+
     Chunk_write(&chunk, OP_RETURN);
+
+    int constant = Chunk_add_constant(&chunk, 5.0);
+    Chunk_write(&chunk, OP_CONSTANT);
+    Chunk_write(&chunk, constant);
+
     Chunk_disassemble(&chunk, "test chunk");
     Chunk_free(&chunk);
     return 0;

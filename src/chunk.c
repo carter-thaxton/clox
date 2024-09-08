@@ -6,10 +6,12 @@ void Chunk_init(Chunk* chunk) {
     chunk->code = NULL;
     chunk->capacity = 0;
     chunk->length = 0;
+    ValueArray_init(&chunk->constants);
 }
 
 void Chunk_free(Chunk* chunk) {
     FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
+    ValueArray_free(&chunk->constants);
     Chunk_init(chunk);
 }
 
@@ -23,4 +25,9 @@ void Chunk_write(Chunk* chunk, uint8_t byte) {
 
     chunk->code[chunk->length] = byte;
     chunk->length++;
+}
+
+int Chunk_add_constant(Chunk* chunk, Value value) {
+    ValueArray_write(&chunk->constants, value);
+    return chunk->constants.length + 1;
 }
