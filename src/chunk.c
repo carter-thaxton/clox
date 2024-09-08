@@ -16,8 +16,9 @@ void Chunk_free(Chunk* chunk) {
 void Chunk_write(Chunk* chunk, uint8_t byte) {
     if (chunk->capacity < chunk->length + 1) {
         int old_capacity = chunk->capacity;
-        chunk->capacity = GROW_CAPACITY(old_capacity);
-        chunk->code = GROW_ARRAY(uint8_t, chunk->code, old_capacity, chunk->capacity);
+        int new_capacity = GROW_CAPACITY(old_capacity);
+        chunk->code = GROW_ARRAY(uint8_t, chunk->code, old_capacity, new_capacity);
+        chunk->capacity = new_capacity;
     }
 
     chunk->code[chunk->length] = byte;

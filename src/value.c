@@ -13,5 +13,13 @@ void ValueArray_free(ValueArray* array) {
 }
 
 void ValueArray_write(ValueArray* array, Value value) {
+    if (array->capacity < array->length + 1) {
+        int old_capacity = array->capacity;
+        int new_capacity = GROW_CAPACITY(old_capacity);
+        array->values = GROW_ARRAY(Value, array->values, old_capacity, new_capacity);
+        array->capacity = new_capacity;
+    }
 
+    array->values[array->length] = value;
+    array->length++;
 }
