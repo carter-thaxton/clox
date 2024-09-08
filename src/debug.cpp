@@ -54,6 +54,14 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_constant_inst("OP_CONSTANT", chunk, offset);
     case OP_CONSTANT_LONG:
         return print_constant_long_inst("OP_CONSTANT_LONG", chunk, offset);
+    case OP_ADD:
+        return print_simple_inst("OP_ADD", offset);
+    case OP_SUBTRACT:
+        return print_simple_inst("OP_SUBTRACT", offset);
+    case OP_MULTIPLY:
+        return print_simple_inst("OP_MULTIPLY", offset);
+    case OP_DIVIDE:
+        return print_simple_inst("OP_DIVIDE", offset);
     case OP_NEGATE:
         return print_simple_inst("OP_NEGATE", offset);
     case OP_RETURN:

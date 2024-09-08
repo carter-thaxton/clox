@@ -65,6 +65,30 @@ inline InterpretResult VM::run() {
             this->push(val);
             break;
         }
+        case OP_ADD: {
+            Value b = this->pop();
+            Value a = this->pop();
+            this->push(a + b);
+            break;
+        }
+        case OP_SUBTRACT: {
+            Value b = this->pop();
+            Value a = this->pop();
+            this->push(a - b);
+            break;
+        }
+        case OP_MULTIPLY: {
+            Value b = this->pop();
+            Value a = this->pop();
+            this->push(a * b);
+            break;
+        }
+        case OP_DIVIDE: {
+            Value b = this->pop();
+            Value a = this->pop();
+            this->push(a / b);
+            break;
+        }
         case OP_NEGATE: {
             Value val = this->pop();
             this->push(-val);
@@ -72,9 +96,9 @@ inline InterpretResult VM::run() {
         }
         case OP_RETURN: {
             Value val = this->pop();
-            printf("return: ");
-            print_value(val);
-            printf("\n");
+            // printf("return: ");
+            // print_value(val);
+            // printf("\n");
             return INTERPRET_OK;
         }
         default:
@@ -83,12 +107,21 @@ inline InterpretResult VM::run() {
     }
 }
 
-void VM::push(Value value) {
+inline void VM::push(Value value) {
     *this->stack_top = value;
     this->stack_top++;
 }
 
-Value VM::pop() {
+inline Value VM::pop() {
     this->stack_top--;
     return *this->stack_top;
 }
+
+// inline Value VM::top() {
+//     return *(this->stack_top-1);
+// }
+
+// inline void VM::replace_top(Value value) {
+//     *(this->stack_top-1) = value;
+// }
+

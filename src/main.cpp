@@ -73,18 +73,22 @@ void run_file(const char* path) {
 int main(int argc, const char* argv[]) {
     Chunk chunk;
 
-    for (int i=0; i < 3; i++) {
-        chunk.write_constant(i * 2.0, 123 + (i / 10));
-    }
+    chunk.write_constant(1.2, 123);
+    chunk.write_constant(3.4, 123);
+    chunk.write(OP_ADD, 123);
+    chunk.write_constant(5.6, 123);
+    chunk.write(OP_DIVIDE, 123);
+    chunk.write(OP_NEGATE, 123);
+    chunk.write(OP_RETURN, 123);
 
-    chunk.write(OP_NEGATE, 500);
-    chunk.write(OP_RETURN, 501);
-
-    print_chunk(&chunk, "test chunk");
+    // print_chunk(&chunk, "test chunk");
 
     VM vm;
-    InterpretResult result = vm.interpret(&chunk);
-    printf("result: %d\n", result);
+
+    for (int i=0; i < 100000000; i++) {
+        InterpretResult result = vm.interpret(&chunk);
+    }
+    // printf("result: %d\n", result);
 
     return 0;
 

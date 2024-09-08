@@ -28,6 +28,8 @@ private:
 
     void push(Value value);
     Value pop();
+    // Value top();
+    // void replace_top(Value value);
 
     Chunk* chunk;
     uint8_t* ip;
