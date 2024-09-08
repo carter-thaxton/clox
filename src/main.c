@@ -1,5 +1,7 @@
 
 #include "common.h"
+#include "chunk.h"
+#include "debug.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,6 +85,13 @@ void run_file(const char *path) {
 }
 
 int main(int argc, const char* argv[]) {
+    Chunk chunk;
+    Chunk_init(&chunk);
+    Chunk_write(&chunk, OP_RETURN);
+    Chunk_disassemble(&chunk, "test chunk");
+    Chunk_free(&chunk);
+    return 0;
+
     if (argc == 1) {
         repl();
     } else if (argc == 2) {
