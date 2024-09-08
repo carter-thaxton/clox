@@ -3,7 +3,6 @@
 #include "chunk.h"
 #include "compiler.h"
 #include "debug.h"
-#include "lexer.h"
 #include "vm.h"
 
 #include <stdio.h>
@@ -16,36 +15,13 @@
 #define EX_IOERR    (74)    // I/O error
 
 
-bool test_lexer(const char* src) {
-    Lexer lexer;
-    lexer.init(src);
-
-    int line = -1;
-    while (true) {
-        Token token = lexer.next_token();
-        if (token.line != line) {
-            printf("%4d ", token.line);
-            line = token.line;
-        } else {
-            printf("   | ");
-        }
-        printf("%2d '%.*s'\n", token.type, token.length, token.start);
-
-        if (token.type == TOKEN_ERROR) return false;
-        if (token.type == TOKEN_EOF) return true;
-    }
-}
-
-
 InterpretResult interpret(VM* vm, const char* src) {
     Chunk chunk;
 
-    // bool ok = test_lexer(src);
     bool ok = compile(src, &chunk);
-    if (!ok)
-        return INTERPRET_COMPILE_ERROR;
+    if (!ok) return INTERPRET_COMPILE_ERROR;
 
-    return INTERPRET_OK;
+    return vm->interpret(&chunk);
 }
 
 

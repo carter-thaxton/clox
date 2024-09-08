@@ -1,9 +1,9 @@
 #include "vm.h"
 
-#ifdef DEBUG_TRACE_EXECUTION
+//#ifdef DEBUG_TRACE_EXECUTION
 #include "debug.h"
 #include <stdio.h>
-#endif
+//#endif
 
 VM::VM() {
     this->stack_top = this->stack;
@@ -42,6 +42,10 @@ inline Value VM::read_constant_24() {
 }
 
 inline InterpretResult VM::run() {
+    #ifdef DEBUG_TRACE_EXECUTION
+    printf("\n== trace ==\n");
+    #endif
+
     while (true)  {
         #ifdef DEBUG_TRACE_EXECUTION
         {
@@ -109,9 +113,8 @@ inline InterpretResult VM::run() {
         }
         case OP_RETURN: {
             Value val = this->pop();
-            // printf("return: ");
-            // print_value(val);
-            // printf("\n");
+            print_value(val);
+            printf("\n");
             return INTERPRET_OK;
         }
         default:
