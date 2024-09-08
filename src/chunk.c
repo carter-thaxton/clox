@@ -30,7 +30,26 @@ void Chunk_write(Chunk* chunk, uint8_t byte, int line) {
     chunk->length++;
 }
 
+int Chunk_write_constant(Chunk* chunk, Value value, int line) {
+    int constant = Chunk_add_constant(chunk, value);
+    if (constant < 256) {
+        // 8-bit constant index
+        Chunk_write(chunk, OP_CONSTANT, line);
+        Chunk_write(chunk, (uint8_t) constant, line);
+    } else {
+        // 24-bit constant index
+        Chunk_write(chunk, OP_CONSTANT_LONG, line);
+        Chunk_write(chunk, (uint8_t) (constant & 0xFF), line);
+        constant >>= 8;
+        Chunk_write(chunk, (uint8_t) (constant & 0xFF), line);
+        constant >>= 8;
+        Chunk_write(chunk, (uint8_t) (constant & 0xFF), line);
+    }
+    return constant;
+}
+
 int Chunk_add_constant(Chunk* chunk, Value value) {
+    int index = chunk->constants.length;
     ValueArray_write(&chunk->constants, value);
-    return chunk->constants.length + 1;
+    return index;
 }

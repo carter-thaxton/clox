@@ -88,9 +88,9 @@ int main(int argc, const char* argv[]) {
     Chunk chunk;
     Chunk_init(&chunk);
 
-    int constant = Chunk_add_constant(&chunk, 5.0);
-    Chunk_write(&chunk, OP_CONSTANT, 123);
-    Chunk_write(&chunk, constant, 123);
+    for (int i=0; i < 300; i++) {
+        Chunk_write_constant(&chunk, i * 2.0, 123 + (i / 10));
+    }
 
     Chunk_write(&chunk, OP_RETURN, 123);
 

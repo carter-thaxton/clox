@@ -9,10 +9,24 @@ static int print_simple_inst(const char* name, int offset) {
 
 static int print_constant_inst(const char* name, Chunk* chunk, int offset) {
     uint8_t constant = chunk->code[offset + 1];
+
     printf("%-16s %4d '", name, constant);
     Value_print(chunk->constants.values[constant]);
     printf("'\n");
+
     return offset + 2;
+}
+
+static int print_constant_long_inst(const char* name, Chunk* chunk, int offset) {
+    int constant = chunk->code[offset + 1];
+    constant |= chunk->code[offset + 2] << 8;
+    constant |= chunk->code[offset + 3] << 16;
+
+    printf("%-16s %4d '", name, constant);
+    Value_print(chunk->constants.values[constant]);
+    printf("'\n");
+
+    return offset + 4;
 }
 
 void Chunk_disassemble(Chunk *chunk, const char* name) {
@@ -37,6 +51,8 @@ int Chunk_disassemble_instruction(Chunk *chunk, int offset) {
     switch (inst) {
     case OP_CONSTANT:
         return print_constant_inst("OP_CONSTANT", chunk, offset);
+    case OP_CONSTANT_LONG:
+        return print_constant_long_inst("OP_CONSTANT_LONG", chunk, offset);
     case OP_RETURN:
         return print_simple_inst("OP_RETURN", offset);
     default:
