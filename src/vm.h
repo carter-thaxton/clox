@@ -9,7 +9,7 @@
 enum InterpretResult {
   INTERPRET_OK,
   INTERPRET_COMPILE_ERROR,
-  INTERPRET_RUNTIME_ERROR
+  INTERPRET_RUNTIME_ERROR,
 };
 
 class VM {
@@ -22,6 +22,9 @@ public:
 private:
     // some fast-path inlined functions
     InterpretResult run();
+    InterpretResult runtime_error(const char* format, ...);
+    void reset_stack();
+
     uint8_t read_byte();
     Value read_constant();
     Value read_constant_16();
@@ -29,8 +32,8 @@ private:
 
     void push(Value value);
     Value pop();
-    // Value top();
-    // void replace_top(Value value);
+    Value top();
+    Value peek(int depth);
 
     Chunk* chunk;
     uint8_t* ip;

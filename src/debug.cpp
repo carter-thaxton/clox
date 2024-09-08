@@ -79,5 +79,6 @@ int print_instruction(Chunk* chunk, int offset) {
 }
 
 void print_value(Value value) {
-    printf("%g", value);
+    // TODO: handle other types
+    printf("%g", AS_NUMBER(value));
 }

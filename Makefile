@@ -38,5 +38,6 @@ all: $(TARGET)
 clean:
 	@rm -f $(CLEAN_LIST)
 
-.PHONY: rebuild
+.PHONY: rebuild r
+r: rebuild
 rebuild: clean all

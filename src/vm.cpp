@@ -1,21 +1,40 @@
 #include "vm.h"
 
-//#ifdef DEBUG_TRACE_EXECUTION
 #include "debug.h"
 #include <stdio.h>
-//#endif
+#include <stdarg.h>
 
 VM::VM() {
-    this->stack_top = this->stack;
+    reset_stack();
 }
 
 VM::~VM() {
+}
+
+void VM::reset_stack() {
+    this->stack_top = this->stack;
 }
 
 InterpretResult VM::interpret(Chunk* chunk) {
     this->chunk = chunk;
     this->ip = chunk->code;
     return run();
+}
+
+InterpretResult VM::runtime_error(const char* format, ...) {
+    // allow variable-length args, like printf()
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    fputs("\n", stderr);
+
+    size_t inst_offset = this->ip - this->chunk->code - 1;
+    int line = this->chunk->lines[inst_offset];
+    fprintf(stderr, "[line %d] in script\n", line);
+
+    reset_stack();
+    return INTERPRET_RUNTIME_ERROR;
 }
 
 // some fast-path inlined functions
@@ -64,55 +83,60 @@ inline InterpretResult VM::run() {
         }
         #endif
 
-        uint8_t inst = this->read_byte();
+        uint8_t inst = read_byte();
 
         switch (inst) {
         case OP_CONSTANT: {
-            Value val = this->read_constant();
-            this->push(val);
+            Value val = read_constant();
+            push(val);
             break;
         }
         case OP_CONSTANT_16: {
-            Value val = this->read_constant_16();
-            this->push(val);
+            Value val = read_constant_16();
+            push(val);
             break;
         }
         case OP_CONSTANT_24: {
-            Value val = this->read_constant_24();
-            this->push(val);
+            Value val = read_constant_24();
+            push(val);
             break;
         }
         case OP_ADD: {
-            Value b = this->pop();
-            Value a = this->pop();
-            this->push(a + b);
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a + b));
             break;
         }
         case OP_SUBTRACT: {
-            Value b = this->pop();
-            Value a = this->pop();
-            this->push(a - b);
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a - b));
             break;
         }
         case OP_MULTIPLY: {
-            Value b = this->pop();
-            Value a = this->pop();
-            this->push(a * b);
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a * b));
             break;
         }
         case OP_DIVIDE: {
-            Value b = this->pop();
-            Value a = this->pop();
-            this->push(a / b);
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(NUMBER_VAL(a / b));
             break;
         }
         case OP_NEGATE: {
-            Value val = this->pop();
-            this->push(-val);
+            if (!IS_NUMBER(peek(0))) return runtime_error("Operand must be a number.");
+            double val = AS_NUMBER(pop());
+            push(NUMBER_VAL(-val));
             break;
         }
         case OP_RETURN: {
-            Value val = this->pop();
+            Value val = pop();
             print_value(val);
             printf("\n");
             return INTERPRET_OK;
@@ -133,11 +157,11 @@ inline Value VM::pop() {
     return *this->stack_top;
 }
 
-// inline Value VM::top() {
-//     return *(this->stack_top-1);
-// }
+inline Value VM::top() {
+    return this->stack_top[-1];
+}
 
-// inline void VM::replace_top(Value value) {
-//     *(this->stack_top-1) = value;
-// }
+inline Value VM::peek(int depth) {
+    return this->stack_top[-1 - depth];
+}
 
