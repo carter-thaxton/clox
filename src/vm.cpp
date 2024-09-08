@@ -34,6 +34,14 @@ inline Value VM::read_constant_long() {
 
 inline InterpretResult VM::run() {
     while (true)  {
+        #ifdef DEBUG_TRACE_EXECUTION
+        {
+            // optionally print each instruction
+            int offset = this->ip - this->chunk->code;
+            this->chunk->disassemble_instruction(offset);
+        }
+        #endif
+
         uint8_t inst = this->read_byte();
 
         switch (inst) {
