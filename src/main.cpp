@@ -14,11 +14,12 @@
 #define EX_IOERR    (74)    // I/O error
 
 
-InterpretResult interpret(const char* src) {
+InterpretResult interpret(VM* vm, const char* src) {
     return INTERPRET_OK;
 }
 
 void repl() {
+    VM vm;
     char line[1024];
 
     while (true) {
@@ -29,7 +30,7 @@ void repl() {
             break;
         }
 
-        interpret(line);
+        interpret(&vm, line);
     }
 }
 
@@ -62,8 +63,10 @@ char* read_file(const char* path) {
 }
 
 void run_file(const char* path) {
+    VM vm;
+
     char *file = read_file(path);
-    int result = interpret(file);
+    int result = interpret(&vm, file);
     free(file);
 
     if (result == INTERPRET_COMPILE_ERROR) exit(EX_DATAERR);
@@ -71,27 +74,6 @@ void run_file(const char* path) {
 }
 
 int main(int argc, const char* argv[]) {
-    Chunk chunk;
-
-    chunk.write_constant(1.2, 123);
-    chunk.write_constant(3.4, 123);
-    chunk.write(OP_ADD, 123);
-    chunk.write_constant(5.6, 123);
-    chunk.write(OP_DIVIDE, 123);
-    chunk.write(OP_NEGATE, 123);
-    chunk.write(OP_RETURN, 123);
-
-    // print_chunk(&chunk, "test chunk");
-
-    VM vm;
-
-    for (int i=0; i < 100000000; i++) {
-        InterpretResult result = vm.interpret(&chunk);
-    }
-    // printf("result: %d\n", result);
-
-    return 0;
-
     if (argc == 1) {
         repl();
     } else if (argc == 2) {
