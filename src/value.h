@@ -3,7 +3,6 @@
 #include "common.h"
 
 typedef double Value;
-void Value_print(Value value);  // TODO: change once Value is a class
 
 struct ValueArray {
     ValueArray();

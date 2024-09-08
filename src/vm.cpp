@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 VM::VM() {
+    this->stack_top = this->stack;
 }
 
 VM::~VM() {
@@ -36,9 +37,18 @@ inline InterpretResult VM::run() {
     while (true)  {
         #ifdef DEBUG_TRACE_EXECUTION
         {
-            // optionally print each instruction
+            // print stack
+            printf("          ");
+            for (Value* slot = this->stack; slot < this->stack_top; slot++) {
+                printf("[ ");
+                print_value(*slot);
+                printf(" ]");
+            }
+            printf("\n");
+
+            // print instruction
             int offset = this->ip - this->chunk->code;
-            this->chunk->disassemble_instruction(offset);
+            print_instruction(this->chunk, offset);
         }
         #endif
 
@@ -46,22 +56,33 @@ inline InterpretResult VM::run() {
 
         switch (inst) {
         case OP_RETURN: {
+            Value val = this->pop();
+            print_value(val);
+            printf("\n");
             return INTERPRET_OK;
         }
         case OP_CONSTANT: {
             Value val = this->read_constant();
-            Value_print(val);
-            printf("\n");
+            this->push(val);
             break;
         }
         case OP_CONSTANT_LONG: {
             Value val = this->read_constant_long();
-            Value_print(val);
-            printf("\n");
+            this->push(val);
             break;
         }
         default:
             ; // nothing
         }
     }
+}
+
+void VM::push(Value value) {
+    *this->stack_top = value;
+    this->stack_top++;
+}
+
+Value VM::pop() {
+    this->stack_top--;
+    return *this->stack_top;
 }

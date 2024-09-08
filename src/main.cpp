@@ -79,7 +79,7 @@ int main(int argc, const char* argv[]) {
 
     chunk.write(OP_RETURN, 123);
 
-    chunk.disassemble("test chunk");
+    print_chunk(&chunk, "test chunk");
 
     VM vm;
     InterpretResult result = vm.interpret(&chunk);

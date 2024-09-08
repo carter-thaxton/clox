@@ -12,7 +12,7 @@ static int print_constant_inst(const char* name, Chunk* chunk, int offset) {
 
     printf("%-16s %4d '", name, constant);
     Value val = chunk->constants.values[constant];
-    Value_print(val);
+    print_value(val);
     printf("'\n");
 
     return offset + 2;
@@ -24,36 +24,36 @@ static int print_constant_long_inst(const char* name, Chunk* chunk, int offset) 
     constant |= chunk->code[offset + 3] << 16;
 
     printf("%-16s %4d '", name, constant);
-    Value_print(chunk->constants.values[constant]);
+    print_value(chunk->constants.values[constant]);
     printf("'\n");
 
     return offset + 4;
 }
 
-void Chunk::disassemble(const char* name) {
+void print_chunk(Chunk* chunk, const char* name) {
     printf("== %s ==\n", name);
 
-    for (int offset = 0; offset < this->length; ) {
-        offset = this->disassemble_instruction(offset);
+    for (int offset = 0; offset < chunk->length; ) {
+        offset = print_instruction(chunk, offset);
     }
 }
 
-int Chunk::disassemble_instruction(int offset) {
+int print_instruction(Chunk* chunk, int offset) {
     printf("%04d ", offset);
 
-    if (offset > 0 && this->lines[offset] == this->lines[offset-1]) {
+    if (offset > 0 && chunk->lines[offset] == chunk->lines[offset-1]) {
         printf("   | ");
     } else {
-        printf("%4d ", this->lines[offset]);
+        printf("%4d ", chunk->lines[offset]);
     }
 
-    uint8_t inst = this->code[offset];
+    uint8_t inst = chunk->code[offset];
 
     switch (inst) {
     case OP_CONSTANT:
-        return print_constant_inst("OP_CONSTANT", this, offset);
+        return print_constant_inst("OP_CONSTANT", chunk, offset);
     case OP_CONSTANT_LONG:
-        return print_constant_long_inst("OP_CONSTANT_LONG", this, offset);
+        return print_constant_long_inst("OP_CONSTANT_LONG", chunk, offset);
     case OP_RETURN:
         return print_simple_inst("OP_RETURN", offset);
     default:
@@ -62,6 +62,6 @@ int Chunk::disassemble_instruction(int offset) {
     }
 }
 
-void Value_print(Value value) {
+void print_value(Value value) {
     printf("%g", value);
 }

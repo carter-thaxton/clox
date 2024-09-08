@@ -18,9 +18,6 @@ struct Chunk {
 
     int add_constant(Value value);
 
-    void disassemble(const char* name);
-    int disassemble_instruction(int offset);
-
     uint8_t* code;
     int* lines;
     int capacity;
