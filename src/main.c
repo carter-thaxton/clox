@@ -88,11 +88,11 @@ int main(int argc, const char* argv[]) {
     Chunk chunk;
     Chunk_init(&chunk);
 
-    Chunk_write(&chunk, OP_RETURN);
-
     int constant = Chunk_add_constant(&chunk, 5.0);
-    Chunk_write(&chunk, OP_CONSTANT);
-    Chunk_write(&chunk, constant);
+    Chunk_write(&chunk, OP_CONSTANT, 123);
+    Chunk_write(&chunk, constant, 123);
+
+    Chunk_write(&chunk, OP_RETURN, 123);
 
     Chunk_disassemble(&chunk, "test chunk");
     Chunk_free(&chunk);
