@@ -73,11 +73,12 @@ void run_file(const char* path) {
 int main(int argc, const char* argv[]) {
     Chunk chunk;
 
-    for (int i=0; i < 300; i++) {
+    for (int i=0; i < 3; i++) {
         chunk.write_constant(i * 2.0, 123 + (i / 10));
     }
 
-    chunk.write(OP_RETURN, 123);
+    chunk.write(OP_NEGATE, 500);
+    chunk.write(OP_RETURN, 501);
 
     print_chunk(&chunk, "test chunk");
 

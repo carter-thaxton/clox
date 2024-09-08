@@ -55,12 +55,6 @@ inline InterpretResult VM::run() {
         uint8_t inst = this->read_byte();
 
         switch (inst) {
-        case OP_RETURN: {
-            Value val = this->pop();
-            print_value(val);
-            printf("\n");
-            return INTERPRET_OK;
-        }
         case OP_CONSTANT: {
             Value val = this->read_constant();
             this->push(val);
@@ -70,6 +64,18 @@ inline InterpretResult VM::run() {
             Value val = this->read_constant_long();
             this->push(val);
             break;
+        }
+        case OP_NEGATE: {
+            Value val = this->pop();
+            this->push(-val);
+            break;
+        }
+        case OP_RETURN: {
+            Value val = this->pop();
+            printf("return: ");
+            print_value(val);
+            printf("\n");
+            return INTERPRET_OK;
         }
         default:
             ; // nothing
