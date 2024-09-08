@@ -66,6 +66,7 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_simple_inst("OP_TRUE", offset);
     case OP_FALSE:
         return print_simple_inst("OP_FALSE", offset);
+
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
     case OP_SUBTRACT:
@@ -74,12 +75,20 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_simple_inst("OP_MULTIPLY", offset);
     case OP_DIVIDE:
         return print_simple_inst("OP_DIVIDE", offset);
+    case OP_EQUAL:
+        return print_simple_inst("OP_EQUAL", offset);
+    case OP_LESS:
+        return print_simple_inst("OP_LESS", offset);
+    case OP_GREATER:
+        return print_simple_inst("OP_GREATER", offset);
+
     case OP_NEGATE:
         return print_simple_inst("OP_NEGATE", offset);
     case OP_NOT:
         return print_simple_inst("OP_NOT", offset);
     case OP_RETURN:
         return print_simple_inst("OP_RETURN", offset);
+
     default:
         printf("Unknown opcode %d\n", inst);
         return offset + 1;

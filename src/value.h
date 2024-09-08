@@ -14,16 +14,6 @@ struct Value {
         bool boolean;
         double number;
     } as;
-
-    bool is_truthy() {
-        if (type == VAL_BOOL) {
-            return as.boolean;
-        } else if (type == VAL_NIL) {
-            return false;
-        } else {
-            return true;
-        }
-    }
 };
 
 #define NIL_VAL             ((Value){VAL_NIL,    {.number  = 0}})

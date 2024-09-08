@@ -38,6 +38,26 @@ InterpretResult VM::runtime_error(const char* format, ...) {
 }
 
 // some fast-path inlined functions
+inline static bool is_truthy(Value val) {
+    if (val.type == VAL_BOOL) {
+        return val.as.boolean;
+    } else if (val.type == VAL_NIL) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+inline static bool is_equal(Value a, Value b) {
+    if (a.type != b.type) return false;
+    switch (a.type) {
+        case VAL_NIL: return true;
+        case VAL_BOOL: return AS_BOOL(a) == AS_BOOL(b);
+        case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
+        default: return false;
+    }
+}
+
 inline uint8_t VM::read_byte() {
     return *this->ip++;
 };
@@ -86,6 +106,7 @@ inline InterpretResult VM::run() {
         uint8_t inst = read_byte();
 
         switch (inst) {
+
         case OP_CONSTANT: {
             Value val = read_constant();
             push(val);
@@ -113,6 +134,7 @@ inline InterpretResult VM::run() {
             push(BOOL_VAL(false));
             break;
         }
+
         case OP_ADD: {
             if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
             double b = AS_NUMBER(pop());
@@ -141,6 +163,28 @@ inline InterpretResult VM::run() {
             push(NUMBER_VAL(a / b));
             break;
         }
+        case OP_EQUAL: {
+            Value b = pop();
+            Value a = pop();
+            bool val = is_equal(a, b);
+            push(BOOL_VAL(val));
+            break;
+        }
+        case OP_LESS: {
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(BOOL_VAL(a < b));
+            break;
+        }
+        case OP_GREATER: {
+            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
+            double b = AS_NUMBER(pop());
+            double a = AS_NUMBER(pop());
+            push(BOOL_VAL(a > b));
+            break;
+        }
+
         case OP_NEGATE: {
             if (!IS_NUMBER(peek(0))) return runtime_error("Operand must be a number.");
             double val = AS_NUMBER(pop());
@@ -148,16 +192,18 @@ inline InterpretResult VM::run() {
             break;
         }
         case OP_NOT: {
-            bool val = pop().is_truthy();
+            bool val = is_truthy(pop());
             push(BOOL_VAL(!val));
             break;
         }
+
         case OP_RETURN: {
             Value val = pop();
             print_value(val);
             printf("\n");
             return INTERPRET_OK;
         }
+
         default:
             ; // nothing
         }

@@ -12,12 +12,18 @@ enum OpCode {
     OP_NIL,
     OP_TRUE,
     OP_FALSE,
+
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
+    OP_EQUAL,
+    OP_LESS,
+    OP_GREATER,
+
     OP_NEGATE,
     OP_NOT,
+
     OP_RETURN,
 };
 
