@@ -2,33 +2,19 @@
 #include "common.h"
 #include "chunk.h"
 #include "debug.h"
+#include "vm.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
-// incorrect command-line usage
-#define EX_USAGE    (64)
-
-// lexer and parser errors
-#define EX_DATAERR  (65)
-
-// invalid input file
-#define EX_NOINPUT  (66)
-
-// runtime errors
-#define EX_SOFTWARE (70)
-
-// I/O error
-#define EX_IOERR    (74)
+#define EX_USAGE    (64)    // incorrect command-line usage
+#define EX_DATAERR  (65)    // lexer and parser errors
+#define EX_NOINPUT  (66)    // invalid input file
+#define EX_SOFTWARE (70)    // runtime errors
+#define EX_IOERR    (74)    // I/O error
 
 
-// TODO: move these
-#define INTERPRET_OK 0
-#define INTERPRET_COMPILE_ERROR 1
-#define INTERPRET_RUNTIME_ERROR 2
-
-int interpret(char* source) {
-    // printf("Interpreting: %s\n", source);
+InterpretResult interpret(const char* src) {
     return INTERPRET_OK;
 }
 
@@ -94,6 +80,11 @@ int main(int argc, const char* argv[]) {
     chunk.write(OP_RETURN, 123);
 
     chunk.disassemble("test chunk");
+
+    VM vm;
+    InterpretResult result = vm.interpret(&chunk);
+    printf("result: %d\n", result);
+
     return 0;
 
     if (argc == 1) {

@@ -3,11 +3,11 @@
 #include "common.h"
 #include "value.h"
 
-typedef enum {
+enum OpCode {
     OP_CONSTANT,
     OP_CONSTANT_LONG,
     OP_RETURN,
-} OpCode;
+};
 
 struct Chunk {
     Chunk();
