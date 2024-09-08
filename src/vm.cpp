@@ -26,7 +26,13 @@ inline Value VM::read_constant() {
     return this->chunk->constants.values[constant];
 }
 
-inline Value VM::read_constant_long() {
+inline Value VM::read_constant_16() {
+    int constant = this->read_byte();
+    constant |= this->read_byte() << 8;
+    return this->chunk->constants.values[constant];
+}
+
+inline Value VM::read_constant_24() {
     int constant = this->read_byte();
     constant |= this->read_byte() << 8;
     constant |= this->read_byte() << 16;
@@ -60,8 +66,13 @@ inline InterpretResult VM::run() {
             this->push(val);
             break;
         }
-        case OP_CONSTANT_LONG: {
-            Value val = this->read_constant_long();
+        case OP_CONSTANT_16: {
+            Value val = this->read_constant_16();
+            this->push(val);
+            break;
+        }
+        case OP_CONSTANT_24: {
+            Value val = this->read_constant_24();
             this->push(val);
             break;
         }

@@ -7,26 +7,30 @@ static int print_simple_inst(const char* name, int offset) {
     return offset + 1;
 }
 
-static int print_constant_inst(const char* name, Chunk* chunk, int offset) {
-    uint8_t constant = chunk->code[offset + 1];
-
-    printf("%-16s %4d '", name, constant);
-    Value val = chunk->constants.values[constant];
-    print_value(val);
-    printf("'\n");
-
-    return offset + 2;
-}
-
-static int print_constant_long_inst(const char* name, Chunk* chunk, int offset) {
-    int constant = chunk->code[offset + 1];
-    constant |= chunk->code[offset + 2] << 8;
-    constant |= chunk->code[offset + 3] << 16;
-
+static void print_constant(const char* name, Chunk* chunk, int constant) {
     printf("%-16s %4d '", name, constant);
     print_value(chunk->constants.values[constant]);
     printf("'\n");
+}
 
+static int print_constant_inst(const char* name, Chunk* chunk, int offset) {
+    uint8_t constant = chunk->code[offset + 1];
+    print_constant(name, chunk, constant);
+    return offset + 2;
+}
+
+static int print_constant_16_inst(const char* name, Chunk* chunk, int offset) {
+    int constant = chunk->code[offset + 1];
+    constant |= chunk->code[offset + 2] << 8;
+    print_constant(name, chunk, constant);
+    return offset + 3;
+}
+
+static int print_constant_24_inst(const char* name, Chunk* chunk, int offset) {
+    int constant = chunk->code[offset + 1];
+    constant |= chunk->code[offset + 2] << 8;
+    constant |= chunk->code[offset + 3] << 16;
+    print_constant(name, chunk, constant);
     return offset + 4;
 }
 
@@ -52,8 +56,10 @@ int print_instruction(Chunk* chunk, int offset) {
     switch (inst) {
     case OP_CONSTANT:
         return print_constant_inst("OP_CONSTANT", chunk, offset);
-    case OP_CONSTANT_LONG:
-        return print_constant_long_inst("OP_CONSTANT_LONG", chunk, offset);
+    case OP_CONSTANT_16:
+        return print_constant_16_inst("OP_CONSTANT_16", chunk, offset);
+    case OP_CONSTANT_24:
+        return print_constant_24_inst("OP_CONSTANT_24", chunk, offset);
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
     case OP_SUBTRACT:

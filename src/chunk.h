@@ -3,9 +3,12 @@
 #include "common.h"
 #include "value.h"
 
+#define MAX_CONSTANTS (1 << 24)
+
 enum OpCode {
     OP_CONSTANT,
-    OP_CONSTANT_LONG,
+    OP_CONSTANT_16,
+    OP_CONSTANT_24,
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,

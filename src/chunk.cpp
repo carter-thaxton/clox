@@ -38,9 +38,15 @@ int Chunk::write_constant(Value value, int line) {
         // 8-bit constant index
         this->write(OP_CONSTANT, line);
         this->write((uint8_t) constant, line);
-    } else {
+    } else if (constant < 65536) {
+        // 16-bit constant index
+        this->write(OP_CONSTANT_16, line);
+        this->write((uint8_t) (constant & 0xFF), line);
+        constant >>= 8;
+        this->write((uint8_t) (constant & 0xFF), line);
+    } else if (constant < MAX_CONSTANTS) {
         // 24-bit constant index
-        this->write(OP_CONSTANT_LONG, line);
+        this->write(OP_CONSTANT_24, line);
         this->write((uint8_t) (constant & 0xFF), line);
         constant >>= 8;
         this->write((uint8_t) (constant & 0xFF), line);

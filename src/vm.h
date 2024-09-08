@@ -24,7 +24,8 @@ private:
     InterpretResult run();
     uint8_t read_byte();
     Value read_constant();
-    Value read_constant_long();
+    Value read_constant_16();
+    Value read_constant_24();
 
     void push(Value value);
     Value pop();
