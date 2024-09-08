@@ -1,14 +1,19 @@
 #include "lexer.h"
 #include <string.h>
 
-Lexer::Lexer(const char* src) {
+Lexer::Lexer() :
+    start(NULL), current(NULL), line(0), token_line(0)
+{
+}
+
+Lexer::~Lexer() {
+}
+
+void Lexer::init(const char* src) {
     this->start = src;
     this->current = src;
     this->line = 1;
     this->token_line = 1;
-}
-
-Lexer::~Lexer() {
 }
 
 static bool is_digit(char c) {

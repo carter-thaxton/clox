@@ -58,9 +58,10 @@ struct Token {
 
 class Lexer {
 public:
-    Lexer(const char* src);
+    Lexer();
     ~Lexer();
 
+    void init(const char* src);
     Token next_token();
     bool at_eof();
 

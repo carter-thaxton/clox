@@ -1,13 +1,1 @@
-print 5 + 6;
-print 99;
-
-var long_string = "this is a very long
-string with multiple lines
-and
-
-doesn't really work in many other
-languages
-
-;
-
-return long_string;
+5 + 6
