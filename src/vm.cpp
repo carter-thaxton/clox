@@ -147,6 +147,11 @@ inline InterpretResult VM::run() {
             push(NUMBER_VAL(-val));
             break;
         }
+        case OP_NOT: {
+            bool val = pop().is_truthy();
+            push(BOOL_VAL(!val));
+            break;
+        }
         case OP_RETURN: {
             Value val = pop();
             print_value(val);

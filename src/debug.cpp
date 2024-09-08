@@ -76,6 +76,8 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_simple_inst("OP_DIVIDE", offset);
     case OP_NEGATE:
         return print_simple_inst("OP_NEGATE", offset);
+    case OP_NOT:
+        return print_simple_inst("OP_NOT", offset);
     case OP_RETURN:
         return print_simple_inst("OP_RETURN", offset);
     default:
