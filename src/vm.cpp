@@ -1,7 +1,9 @@
 #include "vm.h"
-#include "debug.h"
 
+#ifdef DEBUG_TRACE_EXECUTION
+#include "debug.h"
 #include <stdio.h>
+#endif
 
 VM::VM() {
     this->stack_top = this->stack;

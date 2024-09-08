@@ -1,6 +1,83 @@
 #include "compiler.h"
 #include "parser.h"
-#include <stdlib.h>
+#include <stdlib.h>     // strtod
+
+#ifdef DEBUG_PRINT_CODE
+#include "debug.h"
+#endif
+
+
+enum Precedence {
+    PREC_NONE,
+    PREC_ASSIGNMENT,    // =
+    PREC_OR,            // or
+    PREC_AND,           // and
+    PREC_EQUALITY,      // == !=
+    PREC_COMPARISON,    // < > <= >=
+    PREC_TERM,          // + -
+    PREC_FACTOR,        // * /
+    PREC_UNARY,         // ! -
+    PREC_CALL,          // . ()
+    PREC_PRIMARY
+};
+
+typedef void (*ParseFn)();
+
+struct ParseRule {
+    ParseFn prefix;
+    ParseFn infix;
+    Precedence precedence;
+};
+
+// forward declarations
+static void grouping();
+static void unary();
+static void binary();
+static void number();
+
+static ParseRule rules[] = {
+    [TOKEN_LEFT_PAREN]      = {grouping, NULL,   PREC_NONE},
+    [TOKEN_RIGHT_PAREN]     = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_LEFT_BRACE]      = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_RIGHT_BRACE]     = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_COMMA]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_DOT]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_MINUS]           = {unary,    binary, PREC_TERM},
+    [TOKEN_PLUS]            = {NULL,     binary, PREC_TERM},
+    [TOKEN_SEMICOLON]       = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_SLASH]           = {NULL,     binary, PREC_FACTOR},
+    [TOKEN_STAR]            = {NULL,     binary, PREC_FACTOR},
+    [TOKEN_BANG]            = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_BANG_EQUAL]      = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_EQUAL]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_EQUAL_EQUAL]     = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_GREATER]         = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_GREATER_EQUAL]   = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_LESS]            = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_LESS_EQUAL]      = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_IDENTIFIER]      = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_STRING]          = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_NUMBER]          = {number,   NULL,   PREC_NONE},
+    [TOKEN_AND]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_CLASS]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_ELSE]            = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_FALSE]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_FOR]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_FUN]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_IF]              = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_NIL]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_OR]              = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_PRINT]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_RETURN]          = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_SUPER]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_THIS]            = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_TRUE]            = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_VAR]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_WHILE]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_ERROR]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_EOF]             = {NULL,     NULL,   PREC_NONE},
+};
+
 
 static Parser parser;
 static Chunk *compiling_chunk;
@@ -10,13 +87,13 @@ static Chunk* current_chunk() {
     return compiling_chunk;
 }
 
-static void emit_byte(uint8_t byte) {
-    current_chunk()->write(byte, parser.previous.line);
+static void emit_byte(uint8_t byte, int line) {
+    current_chunk()->write(byte, line);
 }
 
-static void emit_bytes(uint8_t byte1, uint8_t byte2) {
-    emit_byte(byte1);
-    emit_byte(byte2);
+static void emit_bytes(uint8_t byte1, uint8_t byte2, int line) {
+    emit_byte(byte1, line);
+    emit_byte(byte2, line);
 }
 
 static void emit_constant(Value value) {
@@ -26,12 +103,47 @@ static void emit_constant(Value value) {
     }
 }
 
-static void emit_return() {
-    emit_byte(OP_RETURN);
+static void emit_return(int line) {
+    emit_byte(OP_RETURN, line);
 }
 
 static void end_compiler() {
-    emit_return();
+    emit_return(parser.previous.line);
+
+    #ifdef DEBUG_PRINT_CODE
+    if (!parser.had_error()) {
+        print_chunk(current_chunk(), "code");
+    }
+    #endif
+}
+
+
+static ParseRule* get_rule(TokenType op_type) {
+    return &rules[op_type];
+}
+
+static void parse_precedence(Precedence precedence) {
+    parser.advance();
+    ParseFn prefix_rule = get_rule(parser.previous.type)->prefix;
+    if (!prefix_rule) {
+        parser.error("Expect expression.");
+        return;
+    }
+    prefix_rule();
+
+    while (precedence <= get_rule(parser.current.type)->precedence) {
+        parser.advance();
+        ParseFn infix_rule = get_rule(parser.previous.type)->infix;
+        if (!infix_rule) {
+            parser.error("missing infix function");
+            return;
+        }
+        infix_rule();
+    }
+}
+
+static void expression() {
+    parse_precedence(PREC_ASSIGNMENT);
 }
 
 static void number() {
@@ -39,11 +151,48 @@ static void number() {
     emit_constant(value);
 }
 
+static void grouping() {
+    expression();
+    parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+}
+
+static void unary() {
+    int line = parser.previous.line;
+    TokenType op_type = parser.previous.type;
+
+    parse_precedence(PREC_UNARY);
+
+    switch (op_type) {
+        case TOKEN_MINUS:   emit_byte(OP_NEGATE, line); break;
+
+        default: parser.error("unreachable unary operator"); return;
+    }
+}
+
+static void binary() {
+    int line = parser.previous.line;
+    TokenType op_type = parser.previous.type;
+    ParseRule* rule = get_rule(op_type);
+
+    Precedence next_prec = (Precedence) (rule->precedence + 1);  // left-associative
+    parse_precedence(next_prec);
+
+    switch (op_type) {
+        case TOKEN_PLUS:    emit_byte(OP_ADD, line); break;
+        case TOKEN_MINUS:   emit_byte(OP_SUBTRACT, line); break;
+        case TOKEN_STAR:    emit_byte(OP_MULTIPLY, line); break;
+        case TOKEN_SLASH:   emit_byte(OP_DIVIDE, line); break;
+
+        default: parser.error("unreachable binary operator"); return;
+    }
+}
+
+
 bool compile(const char* src, Chunk* chunk) {
     parser.init(src);
     compiling_chunk = chunk;
 
-    // expression();
+    expression();
     parser.consume(TOKEN_EOF, "Expect end of expression.");
     end_compiler();
 
