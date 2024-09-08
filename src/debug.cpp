@@ -60,6 +60,12 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_constant_16_inst("OP_CONSTANT_16", chunk, offset);
     case OP_CONSTANT_24:
         return print_constant_24_inst("OP_CONSTANT_24", chunk, offset);
+    case OP_NIL:
+        return print_simple_inst("OP_NIL", offset);
+    case OP_TRUE:
+        return print_simple_inst("OP_TRUE", offset);
+    case OP_FALSE:
+        return print_simple_inst("OP_FALSE", offset);
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
     case OP_SUBTRACT:
@@ -79,6 +85,21 @@ int print_instruction(Chunk* chunk, int offset) {
 }
 
 void print_value(Value value) {
-    // TODO: handle other types
-    printf("%g", AS_NUMBER(value));
+    switch (value.type) {
+        case VAL_NIL: {
+            printf("nil");
+            break;
+        }
+        case VAL_BOOL: {
+            printf(AS_BOOL(value) ? "true" : "false");
+            break;
+        }
+        case VAL_NUMBER: {
+            printf("%g", AS_NUMBER(value));
+            break;
+        }
+        default: {
+            printf("Unrecognized value type\n");
+        }
+    }
 }

@@ -101,6 +101,18 @@ inline InterpretResult VM::run() {
             push(val);
             break;
         }
+        case OP_NIL: {
+            push(NIL_VAL);
+            break;
+        }
+        case OP_TRUE: {
+            push(BOOL_VAL(true));
+            break;
+        }
+        case OP_FALSE: {
+            push(BOOL_VAL(false));
+            break;
+        }
         case OP_ADD: {
             if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
             double b = AS_NUMBER(pop());
