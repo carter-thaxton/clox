@@ -27,7 +27,7 @@
 #define INTERPRET_COMPILE_ERROR 1
 #define INTERPRET_RUNTIME_ERROR 2
 
-int interpret(char *source) {
+int interpret(char* source) {
     // printf("Interpreting: %s\n", source);
     return INTERPRET_OK;
 }
@@ -47,7 +47,7 @@ void repl() {
     }
 }
 
-char *read_file(const char *path) {
+char* read_file(const char* path) {
     FILE* file = fopen(path, "rb");
     if (file == NULL) {
         fprintf(stderr, "Could not open file \"%s\".\n", path);
@@ -75,7 +75,7 @@ char *read_file(const char *path) {
     return buffer;
 }
 
-void run_file(const char *path) {
+void run_file(const char* path) {
     char *file = read_file(path);
     int result = interpret(file);
     free(file);

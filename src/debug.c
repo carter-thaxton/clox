@@ -2,12 +2,10 @@
 
 #include <stdio.h>
 
-
 static int print_simple_inst(const char* name, int offset) {
   printf("%s\n", name);
   return offset + 1;
 }
-
 
 void Chunk_disassemble(Chunk *chunk, const char* name) {
     printf("== %s ==\n", name);

@@ -12,6 +12,6 @@ typedef struct {
     int length;
 } Chunk;
 
-void Chunk_init(Chunk *chunk);
-void Chunk_free(Chunk *chunk);
+void Chunk_init(Chunk* chunk);
+void Chunk_free(Chunk* chunk);
 void Chunk_write(Chunk* chunk, uint8_t byte);

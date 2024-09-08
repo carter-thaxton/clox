@@ -2,13 +2,13 @@
 #include "chunk.h"
 #include "memory.h"
 
-void Chunk_init(Chunk *chunk) {
+void Chunk_init(Chunk* chunk) {
     chunk->code = NULL;
     chunk->capacity = 0;
     chunk->length = 0;
 }
 
-void Chunk_free(Chunk *chunk) {
+void Chunk_free(Chunk* chunk) {
     FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
     Chunk_init(chunk);
 }
