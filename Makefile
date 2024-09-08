@@ -3,8 +3,7 @@ TARGET_NAME	:= clox
 
 CC       := g++
 CFLAGS   := -g -O2
-
-COBJFLAGS	:= $(CFLAGS) -c
+LFLAGS   := -l readline
 
 BIN_PATH := bin
 OBJ_PATH := obj
@@ -22,10 +21,10 @@ default: makedir all
 
 # non-phony targets
 $(TARGET): $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $(OBJ)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ $(OBJ)
 
 $(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
-	$(CC) $(COBJFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 # phony rules
 .PHONY: makedir

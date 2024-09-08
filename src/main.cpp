@@ -7,6 +7,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #define EX_USAGE    (64)    // incorrect command-line usage
 #define EX_DATAERR  (65)    // lexer and parser errors
@@ -27,17 +29,17 @@ InterpretResult interpret(VM* vm, const char* src) {
 
 void repl() {
     VM vm;
-    char line[1024];
 
     while (true) {
-        printf("> ");
+        char *line = readline("> ");
+        if (!line) break;
 
-        if (!fgets(line, sizeof(line), stdin)) {
-            printf("\n");
-            break;
+        if (*line) {
+            add_history(line);
+            interpret(&vm, line);
         }
 
-        interpret(&vm, line);
+        free(line);
     }
 }
 
