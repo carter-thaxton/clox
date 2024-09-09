@@ -41,14 +41,6 @@ void VM::free_objects() {
     this->objects = NULL;
 }
 
-int VM::get_string_count() {
-    return strings.get_count();
-}
-
-int VM::get_object_count() {
-    return object_count;
-}
-
 InterpretResult VM::runtime_error(const char* format, ...) {
     // allow variable-length args, like printf()
     va_list args;

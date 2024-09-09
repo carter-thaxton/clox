@@ -154,11 +154,3 @@ ObjString* Table::find_string(const char* str, int length, uint32_t hash) {
         index = (index + 1) % capacity;
     }
 }
-
-int Table::get_count() {
-    return count;
-}
-
-int Table::get_count_with_tombstones() {
-    return count_with_tombstones;
-}

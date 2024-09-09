@@ -41,7 +41,10 @@ void repl() {
 
         free(line);
 
-        printf("VM strings: %d\tobjects: %d\n", vm.get_string_count(), vm.get_object_count());
+        printf("VM objects: %d\tstrings: %d / %d\n",
+            vm.get_object_count(),
+            vm.get_string_count(),
+            vm.get_string_capacity());
     }
 }
 

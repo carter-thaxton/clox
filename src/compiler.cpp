@@ -228,5 +228,8 @@ bool compile(const char* src, Chunk* chunk, VM* vm) {
     parser.consume(TOKEN_EOF, "Expect end of expression.");
     end_compiler();
 
+    compiling_chunk = NULL;
+    compiling_vm = NULL;
+
     return !parser.had_error();
 }

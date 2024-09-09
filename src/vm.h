@@ -21,8 +21,10 @@ public:
     InterpretResult interpret(Chunk* chunk);
 
     void register_object(Obj* object);
-    int get_string_count();
-    int get_object_count();
+
+    int get_object_count() { return object_count; }
+    int get_string_count() { return strings.get_count(); }
+    int get_string_capacity() { return strings.get_capacity(); }
 
 private:
     // some fast-path inlined functions
