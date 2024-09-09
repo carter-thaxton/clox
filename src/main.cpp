@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -26,6 +27,12 @@ InterpretResult interpret(VM* vm, const char* src) {
     return vm->interpret(&chunk);
 }
 
+void debug(VM* vm) {
+    printf("VM objects: %d\tstrings: %d / %d\n",
+        vm->get_object_count(),
+        vm->get_string_count(),
+        vm->get_string_capacity());
+}
 
 void repl() {
     VM vm;
@@ -36,15 +43,16 @@ void repl() {
 
         if (*line) {
             add_history(line);
-            interpret(&vm, line);
+
+            // handle some commands at repl
+            if (strcmp(line, "debug") == 0) {
+                debug(&vm);
+            } else {
+                interpret(&vm, line);
+            }
         }
 
         free(line);
-
-        // printf("VM objects: %d\tstrings: %d / %d\n",
-        //     vm.get_object_count(),
-        //     vm.get_string_count(),
-        //     vm.get_string_capacity());
     }
 }
 
