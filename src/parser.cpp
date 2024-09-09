@@ -57,14 +57,14 @@ int Parser::line_at_current() {
 void Parser::advance() {
     previous = current;
 
-    // move to next token, and report but skip any errors
+    // move to next token non-error token
     while (true) {
         current = lexer.next_token();
-
-        if (current.type != TOKEN_ERROR)
+        if (current.type == TOKEN_ERROR) {
+            error_at_current(current.start);
+        } else {
             break;
-
-        error_at_current(current.start);
+        }
     }
 }
 

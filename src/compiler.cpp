@@ -86,7 +86,8 @@ static ParseRule rules[] = {
     [TOKEN_WHILE]           = {NULL,     NULL,   PREC_NONE},
 };
 
-
+// global variables, to avoid passing through all functions below
+// initialized and then cleared all within compile(), so it shouldn't leak
 static Parser parser;
 static Chunk *compiling_chunk;
 static VM *compiling_vm;
@@ -262,6 +263,7 @@ static void declaration() {
 //
 
 bool compile(const char* src, Chunk* chunk, VM* vm) {
+    // use static globals, so not re-entrant
     parser.init(src);
     compiling_chunk = chunk;
     compiling_vm = vm;
@@ -272,8 +274,12 @@ bool compile(const char* src, Chunk* chunk, VM* vm) {
 
     end_compiler();
 
+    bool ok = !parser.had_error();
+
+    // clear the static globals
+    parser.init("");
     compiling_chunk = NULL;
     compiling_vm = NULL;
 
-    return !parser.had_error();
+    return ok;
 }
