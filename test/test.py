@@ -53,6 +53,9 @@ def parse_expectations(file):
 
   return expect_output, expect_parser_errors, expect_runtime_errors
 
+#
+# main
+#
 
 if len(sys.argv) < 2:
   print("Usage: test.py <test.lox>")
@@ -60,8 +63,10 @@ if len(sys.argv) < 2:
 
 file = sys.argv[1]
 
+# parse expectations from input file
 expect_output, expect_parser_errors, expect_runtime_errors = parse_expectations(file)
 
+# run input file to get actual output and exit_code
 exit_code, stdout, stderr = run(['bin/clox', file])
 
 # split stdout into non-blank lines
