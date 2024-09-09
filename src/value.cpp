@@ -44,17 +44,7 @@ bool values_equal(Value a, Value b) {
         case VAL_NIL: return true;
         case VAL_BOOL: return AS_BOOL(a) == AS_BOOL(b);
         case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
-        case VAL_OBJ: {
-            if (OBJ_TYPE(a) != OBJ_TYPE(b)) return false;
-            switch (OBJ_TYPE(a)) {
-                case OBJ_STRING: {
-                    ObjString* sa = AS_STRING(a);
-                    ObjString* sb = AS_STRING(b);
-                    if (sa->length != sb->length) return false;
-                    return memcmp(sa->chars, sb->chars, sa->length) == 0;
-                }
-            }
-        }
+        case VAL_OBJ: return AS_OBJ(a) == AS_OBJ(b);
     }
     return false;
 }
