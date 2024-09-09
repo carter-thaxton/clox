@@ -35,6 +35,7 @@ static void unary();
 static void binary();
 static void number();
 static void literal();
+static void string();
 
 static ParseRule rules[] = {
     [TOKEN_EOF]             = {NULL,     NULL,   PREC_NONE},
@@ -62,7 +63,7 @@ static ParseRule rules[] = {
     [TOKEN_LESS_EQUAL]      = {NULL,     binary, PREC_COMPARISON},
 
     [TOKEN_IDENTIFIER]      = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_STRING]          = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_STRING]          = {string,   NULL,   PREC_NONE},
     [TOKEN_NUMBER]          = {number,   NULL,   PREC_NONE},
 
     [TOKEN_AND]             = {NULL,     NULL,   PREC_NONE},
@@ -86,6 +87,7 @@ static ParseRule rules[] = {
 
 static Parser parser;
 static Chunk *compiling_chunk;
+static VM *compiling_vm;
 
 
 static Chunk* current_chunk() {
@@ -167,7 +169,12 @@ static void literal() {
 
         default: parser.error("unreachable literal"); return;
     }
+}
 
+static void string() {
+    const char* str = parser.previous.start + 1;    // skip opening "
+    int length = parser.previous.length - 2;        // without opening and closing ""
+    emit_constant(string_value(compiling_vm, str, length));
 }
 
 static void grouping() {
@@ -216,9 +223,10 @@ static void binary() {
 }
 
 
-bool compile(const char* src, Chunk* chunk) {
+bool compile(const char* src, Chunk* chunk, VM* vm) {
     parser.init(src);
     compiling_chunk = chunk;
+    compiling_vm = vm;
 
     expression();
     parser.consume(TOKEN_EOF, "Expect end of expression.");

@@ -1,5 +1,6 @@
 #include "value.h"
 #include "memory.h"
+#include "vm.h"
 #include <string.h>
 
 ValueArray::ValueArray() {
@@ -50,25 +51,39 @@ bool values_equal(Value a, Value b) {
     return false;
 }
 
-
-static Obj* alloc_obj(size_t size, ObjType type) {
-    Obj* object = (Obj*) reallocate(NULL, 0, size);
-    object->type = type;
-    return object;
-}
-
-static ObjString* copy_string(const char* str, int length) {
+Value string_value(VM* vm, const char* str, int length) {
     // <-- ObjString -->
     // [ type | length | chars ... ]
     size_t size = sizeof(ObjString) + length + 1;
-    ObjString* result = (ObjString*) alloc_obj(size, OBJ_STRING);
+    ObjString* result = (ObjString*) vm->alloc_object(size, OBJ_STRING);
     memcpy(result->chars, str, length);
     result->chars[length] = '\0';
     result->length = length;
-    return result;
+    return OBJ_VAL(result);
 }
 
-Value make_string(const char* str, int length) {
-    ObjString *obj = copy_string(str, length);
-    return OBJ_VAL(obj);
+Value concatenate_strings(VM* vm, Value a, Value b) {
+    ObjString* sa = AS_STRING(a);
+    ObjString* sb = AS_STRING(b);
+
+    int length = sa->length + sb->length;
+    size_t size = sizeof(ObjString) + length + 1;
+    ObjString* result = (ObjString*) vm->alloc_object(size, OBJ_STRING);
+    memcpy(result->chars, sa->chars, sa->length);
+    memcpy(result->chars + sa->length, sb->chars, sb->length);
+    result->chars[length] = '\0';
+    result->length = length;
+
+    return OBJ_VAL(result);
+}
+
+void free_object(Obj* object) {
+    switch (object->type) {
+        case OBJ_STRING: {
+            ObjString* string = (ObjString*) object;
+            size_t size = sizeof(ObjString) + string->length + 1;
+            reallocate(string, size, 0);
+            break;
+        }
+    }
 }

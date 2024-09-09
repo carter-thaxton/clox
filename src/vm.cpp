@@ -1,14 +1,17 @@
 #include "vm.h"
+#include "memory.h"
 
 #include "debug.h"
 #include <stdio.h>
 #include <stdarg.h>
 
 VM::VM() {
+    this->objects = NULL;
     reset_stack();
 }
 
 VM::~VM() {
+    free_objects();
 }
 
 void VM::reset_stack() {
@@ -19,6 +22,24 @@ InterpretResult VM::interpret(Chunk* chunk) {
     this->chunk = chunk;
     this->ip = chunk->code;
     return run();
+}
+
+Obj* VM::alloc_object(size_t size, ObjType type) {
+    Obj* object = (Obj*) reallocate(NULL, 0, size);
+    object->type = type;
+    object->next = this->objects;
+    this->objects = object;
+    return object;
+}
+
+void VM::free_objects() {
+    Obj* object = this->objects;
+    while (object) {
+        Obj* next = object->next;
+        free_object(object);
+        object = next;
+    }
+    this->objects = NULL;
 }
 
 InterpretResult VM::runtime_error(const char* format, ...) {
@@ -115,10 +136,17 @@ inline InterpretResult VM::run() {
         }
 
         case OP_ADD: {
-            if (!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) return runtime_error("Operands must be numbers.");
-            double b = AS_NUMBER(pop());
-            double a = AS_NUMBER(pop());
-            push(NUMBER_VAL(a + b));
+            if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
+                Value b = pop();
+                Value a = pop();
+                push(concatenate_strings(this, a, b));
+            } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
+                double b = AS_NUMBER(pop());
+                double a = AS_NUMBER(pop());
+                push(NUMBER_VAL(a + b));
+            } else {
+                return runtime_error("Operands must be two numbers or two strings.");
+            }
             break;
         }
         case OP_SUBTRACT: {

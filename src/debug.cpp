@@ -110,14 +110,19 @@ void print_value(Value value) {
             return;
         }
         case VAL_OBJ: {
-            switch (OBJ_TYPE(value)) {
-                case OBJ_STRING: {
-                    printf("%s", AS_CSTRING(value));
-                    return;
-                }
-            }
+            print_object(AS_OBJ(value));
+            return;
         }
     }
 
     printf("Unrecognized value type\n");
+}
+
+void print_object(Obj* object) {
+    switch (object->type) {
+        case OBJ_STRING: {
+            printf("%s", ((ObjString*) object)->chars);
+            return;
+        }
+    }
 }

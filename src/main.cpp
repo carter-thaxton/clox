@@ -20,7 +20,7 @@
 InterpretResult interpret(VM* vm, const char* src) {
     Chunk chunk;
 
-    bool ok = compile(src, &chunk);
+    bool ok = compile(src, &chunk, vm);
     if (!ok) return INTERPRET_COMPILE_ERROR;
 
     return vm->interpret(&chunk);
@@ -83,11 +83,6 @@ void run_file(const char* path) {
 }
 
 int main(int argc, const char* argv[]) {
-    Value s = make_string("1234567890", 3);
-    print_value(s);
-    return 0;
-
-
     if (argc == 1) {
         repl();
     } else if (argc == 2) {

@@ -2,12 +2,15 @@
 
 #include "common.h"
 
+struct VM;
+
 enum ObjType {
     OBJ_STRING,
 };
 
 struct Obj {
     ObjType type;
+    Obj* next;
 };
 
 struct ObjString {
@@ -80,4 +83,6 @@ inline static bool is_obj_type(Value value, ObjType type) {
 }
 
 bool values_equal(Value a, Value b);
-Value make_string(const char* str, int length);
+Value string_value(VM* vm, const char* str, int length);
+Value concatenate_strings(VM* vm, Value a, Value b);
+void free_object(Obj* object);

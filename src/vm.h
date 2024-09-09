@@ -19,11 +19,14 @@ public:
 
     InterpretResult interpret(Chunk* chunk);
 
+    Obj* alloc_object(size_t size, ObjType type);
+
 private:
     // some fast-path inlined functions
     InterpretResult run();
     InterpretResult runtime_error(const char* format, ...);
     void reset_stack();
+    void free_objects();
 
     uint8_t read_byte();
     Value read_constant();
@@ -39,4 +42,5 @@ private:
     uint8_t* ip;
     Value stack[STACK_MAX];
     Value* stack_top;
+    Obj* objects;
 };
