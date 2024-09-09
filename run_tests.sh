@@ -17,7 +17,7 @@ PASS=0
 FAIL=0
 for arg in "$@"; do
   while read -r file; do
-    output="$(./test.py "$file" 2>&1)";
+    output="$(test/test.py "$file" 2>&1)";
 
     if [[ "$?" == 0 ]]; then
       if [[ -z "$no_pass" ]]; then
