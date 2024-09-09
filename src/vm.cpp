@@ -139,7 +139,9 @@ inline InterpretResult VM::run() {
             if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
                 Value b = pop();
                 Value a = pop();
-                push(concatenate_strings(this, a, b));
+                Value result = concatenate_strings(this, a, b);
+                if (IS_NIL(result)) return runtime_error("String too long.");
+                push(result);
             } else if (IS_NUMBER(peek(0)) && IS_NUMBER(peek(1))) {
                 double b = AS_NUMBER(pop());
                 double a = AS_NUMBER(pop());

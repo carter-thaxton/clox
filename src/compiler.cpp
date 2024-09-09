@@ -132,19 +132,13 @@ static ParseRule* get_rule(TokenType op_type) {
 static void parse_precedence(Precedence precedence) {
     parser.advance();
     ParseFn prefix_rule = get_rule(parser.previous.type)->prefix;
-    if (!prefix_rule) {
-        parser.error("Expect expression.");
-        return;
-    }
+    if (!prefix_rule) return parser.error("Expect expression.");
     prefix_rule();
 
     while (precedence <= get_rule(parser.current.type)->precedence) {
         parser.advance();
         ParseFn infix_rule = get_rule(parser.previous.type)->infix;
-        if (!infix_rule) {
-            parser.error("missing infix function");
-            return;
-        }
+        if (!infix_rule) return parser.error("missing infix function");
         infix_rule();
     }
 }
@@ -167,14 +161,16 @@ static void literal() {
         case TOKEN_TRUE:    emit_byte(OP_TRUE, line); break;
         case TOKEN_FALSE:   emit_byte(OP_FALSE, line); break;
 
-        default: parser.error("unreachable literal"); return;
+        default: return parser.error("unreachable literal");
     }
 }
 
 static void string() {
     const char* str = parser.previous.start + 1;    // skip opening "
     int length = parser.previous.length - 2;        // without opening and closing ""
-    emit_constant(string_value(compiling_vm, str, length));
+    Value val = string_value(compiling_vm, str, length);
+    if (IS_NIL(val)) return parser.error("String too long.");
+    emit_constant(val);
 }
 
 static void grouping() {
@@ -193,7 +189,7 @@ static void unary() {
         case TOKEN_BANG:    emit_byte(OP_NOT, line); break;
         case TOKEN_PLUS:    break;  // NOP
 
-        default: parser.error("unreachable unary operator"); return;
+        default: return parser.error("unreachable unary operator");
     }
 }
 
@@ -218,7 +214,7 @@ static void binary() {
         case TOKEN_GREATER:         emit_byte(OP_GREATER, line); break;
         case TOKEN_GREATER_EQUAL:   emit_bytes(OP_LESS, OP_NOT, line); break;
 
-        default: parser.error("unreachable binary operator"); return;
+        default: return parser.error("unreachable binary operator");
     }
 }
 

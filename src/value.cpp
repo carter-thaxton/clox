@@ -52,6 +52,8 @@ bool values_equal(Value a, Value b) {
 }
 
 Value string_value(VM* vm, const char* str, int length) {
+    if (length >= STRING_MAX_LEN) return NIL_VAL;
+
     // <-- ObjString -->
     // [ type | length | chars ... ]
     size_t size = sizeof(ObjString) + length + 1;
@@ -67,6 +69,8 @@ Value concatenate_strings(VM* vm, Value a, Value b) {
     ObjString* sb = AS_STRING(b);
 
     int length = sa->length + sb->length;
+    if (length >= STRING_MAX_LEN) return NIL_VAL;
+
     size_t size = sizeof(ObjString) + length + 1;
     ObjString* result = (ObjString*) vm->alloc_object(size, OBJ_STRING);
     memcpy(result->chars, sa->chars, sa->length);

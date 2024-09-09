@@ -15,7 +15,8 @@ struct Obj {
 
 struct ObjString {
     Obj obj;
-    int length;
+    uint32_t length;
+    uint32_t hash;
     char chars[];
 };
 
@@ -65,6 +66,8 @@ struct ValueArray {
 #define IS_STRING(value)    (is_obj_type(value, OBJ_STRING))
 #define AS_STRING(value)    ((ObjString*) AS_OBJ(value))
 #define AS_CSTRING(value)   (AS_STRING(value)->chars)
+
+#define STRING_MAX_LEN      0x7FFFFF00
 
 
 // some fast-path inlined functions
