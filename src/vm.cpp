@@ -24,12 +24,10 @@ InterpretResult VM::interpret(Chunk* chunk) {
     return run();
 }
 
-Obj* VM::alloc_object(size_t size, ObjType type) {
-    Obj* object = (Obj*) reallocate(NULL, 0, size);
-    object->type = type;
+void VM::register_object(Obj* object) {
     object->next = this->objects;
     this->objects = object;
-    return object;
+    this->object_count++;
 }
 
 void VM::free_objects() {
@@ -38,8 +36,17 @@ void VM::free_objects() {
         Obj* next = object->next;
         free_object(object);
         object = next;
+        object_count--;
     }
     this->objects = NULL;
+}
+
+int VM::get_string_count() {
+    return strings.get_count();
+}
+
+int VM::get_object_count() {
+    return object_count;
 }
 
 InterpretResult VM::runtime_error(const char* format, ...) {

@@ -3,6 +3,7 @@
 #include "common.h"
 #include "chunk.h"
 #include "value.h"
+#include "table.h"
 
 #define STACK_MAX 1024
 
@@ -19,7 +20,9 @@ public:
 
     InterpretResult interpret(Chunk* chunk);
 
-    Obj* alloc_object(size_t size, ObjType type);
+    void register_object(Obj* object);
+    int get_string_count();
+    int get_object_count();
 
 private:
     // some fast-path inlined functions
@@ -40,7 +43,12 @@ private:
 
     Chunk* chunk;
     uint8_t* ip;
-    Value stack[STACK_MAX];
-    Value* stack_top;
+    int object_count;
     Obj* objects;
+    Table strings;
+    Value* stack_top;
+    Value stack[STACK_MAX];
+
+    friend Value string_value(VM* vm, const char* str, int length);
+    friend Value concatenate_strings(VM* vm, Value a, Value b);
 };
