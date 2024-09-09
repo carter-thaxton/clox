@@ -121,7 +121,7 @@ void print_value(Value value) {
 void print_object(Obj* object) {
     switch (object->type) {
         case OBJ_STRING: {
-            printf("%s", ((ObjString*) object)->chars);
+            printf("\"%s\"", ((ObjString*) object)->chars);
             return;
         }
     }
