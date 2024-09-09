@@ -1,0 +1,19 @@
+class Foo {
+  bar() {
+    return "hello";
+  }
+}
+
+print Foo; // expect: Foo
+
+var Bar = Foo;
+
+var f = Foo();
+var f2 = f;
+print f; // expect: Foo instance
+print f2; // expect: Foo instance
+
+var b = Bar();
+var b2 = b;
+print b; // expect: Foo instance
+print b2; // expect: Foo instance
