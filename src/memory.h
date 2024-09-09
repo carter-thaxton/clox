@@ -11,4 +11,7 @@
 #define FREE_ARRAY(type, ptr, old_capacity) \
     (type*) reallocate(ptr, sizeof(type) * (old_capacity), 0)
 
+#define ALLOC_ARRAY(type, new_capacity) \
+    (type*) reallocate(NULL, 0, sizeof(type) * (new_capacity))
+
 void* reallocate(void* ptr, size_t old_size, size_t new_size);

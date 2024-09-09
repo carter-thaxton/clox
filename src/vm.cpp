@@ -37,27 +37,6 @@ InterpretResult VM::runtime_error(const char* format, ...) {
     return INTERPRET_RUNTIME_ERROR;
 }
 
-// some fast-path inlined functions
-inline static bool is_truthy(Value val) {
-    if (val.type == VAL_BOOL) {
-        return val.as.boolean;
-    } else if (val.type == VAL_NIL) {
-        return false;
-    } else {
-        return true;
-    }
-}
-
-inline static bool is_equal(Value a, Value b) {
-    if (a.type != b.type) return false;
-    switch (a.type) {
-        case VAL_NIL: return true;
-        case VAL_BOOL: return AS_BOOL(a) == AS_BOOL(b);
-        case VAL_NUMBER: return AS_NUMBER(a) == AS_NUMBER(b);
-        default: return false;
-    }
-}
-
 inline uint8_t VM::read_byte() {
     return *this->ip++;
 };
@@ -166,7 +145,7 @@ inline InterpretResult VM::run() {
         case OP_EQUAL: {
             Value b = pop();
             Value a = pop();
-            bool val = is_equal(a, b);
+            bool val = values_equal(a, b);
             push(BOOL_VAL(val));
             break;
         }

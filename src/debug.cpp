@@ -99,18 +99,25 @@ void print_value(Value value) {
     switch (value.type) {
         case VAL_NIL: {
             printf("nil");
-            break;
+            return;
         }
         case VAL_BOOL: {
             printf(AS_BOOL(value) ? "true" : "false");
-            break;
+            return;
         }
         case VAL_NUMBER: {
             printf("%g", AS_NUMBER(value));
-            break;
+            return;
         }
-        default: {
-            printf("Unrecognized value type\n");
+        case VAL_OBJ: {
+            switch (OBJ_TYPE(value)) {
+                case OBJ_STRING: {
+                    printf("%s", AS_CSTRING(value));
+                    return;
+                }
+            }
         }
     }
+
+    printf("Unrecognized value type\n");
 }
