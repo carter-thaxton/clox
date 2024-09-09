@@ -14,45 +14,9 @@ void Parser::init(const char* src) {
     advance();
 }
 
-void Parser::error_at_current(const char* msg) {
-    error_at(&current, msg);
-}
-
-void Parser::error(const char* msg) {
-    error_at(&previous, msg);
-}
-
-void Parser::error_at(Token* token, const char* msg) {
-    if (panic_mode) return;
-
-    fprintf(stderr, "[line %d] Error", token->line);
-
-    if (token->type == TOKEN_EOF) {
-        fprintf(stderr, " at end");
-    } else if (token->type == TOKEN_ERROR) {
-        // Nothing.
-    } else {
-        // print only 'length' chars from 'start'
-        fprintf(stderr, " at '%.*s'", token->length, token->start);
-    }
-
-    fprintf(stderr, ": %s\n", msg);
-
-    panic_mode = true;
-    error_count++;
-}
-
-bool Parser::had_error() {
-    return error_count > 0;
-}
-
-int Parser::line() {
-    return previous.line;
-}
-
-int Parser::line_at_current() {
-    return current.line;
-}
+//
+// Tokens
+//
 
 void Parser::advance() {
     previous = current;
@@ -85,15 +49,49 @@ bool Parser::match(TokenType type) {
     }
 }
 
-bool Parser::check(TokenType type) {
+bool Parser::check(TokenType type) const {
     return current.type == type;
 }
 
-void Parser::synchronize() {
+
+//
+// Errors
+//
+
+void Parser::error(const char* msg) {
+    error_at(&previous, msg);
+}
+
+void Parser::error_at_current(const char* msg) {
+    error_at(&current, msg);
+}
+
+void Parser::error_at(Token* token, const char* msg) {
+    if (panic_mode) return;
+
+    fprintf(stderr, "[line %d] Error", token->line);
+
+    if (token->type == TOKEN_EOF) {
+        fprintf(stderr, " at end");
+    } else if (token->type == TOKEN_ERROR) {
+        // Nothing.
+    } else {
+        // print only 'length' chars from 'start'
+        fprintf(stderr, " at '%.*s'", token->length, token->start);
+    }
+
+    fprintf(stderr, ": %s\n", msg);
+
+    panic_mode = true;
+    error_count++;
+}
+
+bool Parser::synchronize() {
+    if (!panic_mode) return false;
     panic_mode = false;
 
     while (current.type != TOKEN_EOF) {
-        if (previous.type == TOKEN_SEMICOLON) return;
+        if (previous.type == TOKEN_SEMICOLON) return true;
         switch (current.type) {
             case TOKEN_CLASS:
             case TOKEN_FUN:
@@ -103,13 +101,13 @@ void Parser::synchronize() {
             case TOKEN_WHILE:
             case TOKEN_PRINT:
             case TOKEN_RETURN:
-                return;
+                return true;
 
             default:
-                ; // Do nothing.
+                advance();
         }
-
-        advance();
     }
+
+    return true;
 }
 

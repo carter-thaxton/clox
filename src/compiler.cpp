@@ -254,7 +254,7 @@ static void statement() {
 static void declaration() {
     statement();
 
-    if (parser.panic_mode) parser.synchronize();
+    parser.synchronize();
 }
 
 
