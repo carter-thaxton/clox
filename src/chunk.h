@@ -6,12 +6,17 @@
 #define MAX_CONSTANTS (1 << 24)
 
 enum OpCode {
-    OP_CONSTANT,
-    OP_CONSTANT_16,
-    OP_CONSTANT_24,
     OP_NIL,
     OP_TRUE,
     OP_FALSE,
+
+    OP_CONSTANT,
+    OP_CONSTANT_16,
+    OP_CONSTANT_24,
+
+    OP_DEFINE_GLOBAL,
+    OP_DEFINE_GLOBAL_16,
+    OP_DEFINE_GLOBAL_24,
 
     OP_ADD,
     OP_SUBTRACT,
@@ -34,7 +39,9 @@ struct Chunk {
     ~Chunk();
 
     void write(uint8_t byte, int line);
+
     void write_constant(int constant, int line);
+    void write_define_global(int constant, int line);
 
     int write_constant_value(Value value, int line);
     int add_constant_value(Value value);

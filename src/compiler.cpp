@@ -115,6 +115,10 @@ static int emit_constant(Value value) {
     return index;
 }
 
+static void emit_define_global(int constant, int line) {
+    current_chunk()->write_define_global(constant, line);
+}
+
 static void emit_return(int line) {
     emit_byte(OP_RETURN, line);
 }
@@ -144,6 +148,7 @@ static int make_identifier_constant(Token* token) {
     return index;
 }
 
+// parse identifier as variable name, make string object, and add as a constant value to chunk
 // return the constant index on success
 // return -1 and produce parser error on failure
 static int parse_variable(const char* err_msg) {
@@ -153,6 +158,7 @@ static int parse_variable(const char* err_msg) {
         return -1;
     }
 }
+
 
 //
 // Expressions
@@ -277,8 +283,30 @@ static void statement() {
     }
 }
 
+static void var_decl() {
+    int global = parse_variable("Expect variable name.");
+    int line = parser.line();
+
+    if (parser.match(TOKEN_EQUAL)) {
+        // parse initial value, leaving it on stack
+        expression();
+    } else {
+        // use nil as initial value
+        emit_byte(OP_NIL, parser.line());
+    }
+
+    parser.consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+
+    // TODO: handle local variables
+    emit_define_global(global, line);
+}
+
 static void declaration() {
-    statement();
+    if (parser.match(TOKEN_VAR)) {
+        var_decl();
+    } else {
+        statement();
+    }
 
     parser.synchronize();
 }
