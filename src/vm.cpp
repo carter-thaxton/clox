@@ -236,10 +236,6 @@ inline Value VM::pop() {
     return *this->stack_top;
 }
 
-inline Value VM::top() {
-    return this->stack_top[-1];
-}
-
 inline Value VM::peek(int depth) {
     return this->stack_top[-1 - depth];
 }

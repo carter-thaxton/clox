@@ -40,7 +40,6 @@ private:
 
     void push(Value value);
     Value pop();
-    Value top();
     Value peek(int depth);
 
     Chunk* chunk;
