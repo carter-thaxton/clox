@@ -205,10 +205,18 @@ inline InterpretResult VM::run() {
             break;
         }
 
-        case OP_RETURN: {
+        case OP_POP: {
+            pop();
+            break;
+        }
+        case OP_PRINT: {
             Value val = pop();
             print_value(val);
             printf("\n");
+            break;
+        }
+        case OP_RETURN: {
+            // exit
             return INTERPRET_OK;
         }
 

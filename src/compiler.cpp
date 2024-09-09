@@ -1,5 +1,7 @@
 #include "compiler.h"
 #include "parser.h"
+#include "chunk.h"
+#include "vm.h"
 #include <stdlib.h>     // strtod
 
 #ifdef DEBUG_PRINT_CODE
@@ -104,7 +106,7 @@ static void emit_bytes(uint8_t byte1, uint8_t byte2, int line) {
 }
 
 static void emit_constant(Value value) {
-    int index = current_chunk()->write_constant(value, parser.previous.line);
+    int index = current_chunk()->write_constant(value, parser.line());
     if (index >= MAX_CONSTANTS) {
         parser.error("Too many constants in one chunk.");
     }
@@ -115,7 +117,7 @@ static void emit_return(int line) {
 }
 
 static void end_compiler() {
-    emit_return(parser.previous.line);
+    emit_return(parser.line());
 
     #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error()) {
@@ -124,6 +126,10 @@ static void end_compiler() {
     #endif
 }
 
+
+//
+// Expressions
+//
 
 static ParseRule* get_rule(TokenType op_type) {
     return &rules[op_type];
@@ -153,7 +159,7 @@ static void number() {
 }
 
 static void literal() {
-    int line = parser.previous.line;
+    int line = parser.line();
     TokenType op_type = parser.previous.type;
 
     switch (op_type) {
@@ -179,7 +185,7 @@ static void grouping() {
 }
 
 static void unary() {
-    int line = parser.previous.line;
+    int line = parser.line();
     TokenType op_type = parser.previous.type;
 
     parse_precedence(PREC_UNARY);
@@ -194,7 +200,7 @@ static void unary() {
 }
 
 static void binary() {
-    int line = parser.previous.line;
+    int line = parser.line();
     TokenType op_type = parser.previous.type;
     ParseRule* rule = get_rule(op_type);
 
@@ -218,14 +224,52 @@ static void binary() {
     }
 }
 
+//
+// Statements
+//
+
+static void expression_stmt() {
+    int line = parser.line();
+    expression();
+    parser.consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+    emit_byte(OP_POP, line);
+}
+
+static void print_stmt() {
+    int line = parser.line();
+    expression();
+    parser.consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+    emit_byte(OP_PRINT, line);
+}
+
+static void statement() {
+    if (parser.match(TOKEN_PRINT)) {
+        print_stmt();
+    } else {
+        expression_stmt();
+    }
+}
+
+static void declaration() {
+    statement();
+
+    if (parser.panic_mode) parser.synchronize();
+}
+
+
+//
+// Top-Level Interface
+//
 
 bool compile(const char* src, Chunk* chunk, VM* vm) {
     parser.init(src);
     compiling_chunk = chunk;
     compiling_vm = vm;
 
-    expression();
-    parser.consume(TOKEN_EOF, "Expect end of expression.");
+    while (!parser.match(TOKEN_EOF)) {
+        declaration();
+    }
+
     end_compiler();
 
     compiling_chunk = NULL;

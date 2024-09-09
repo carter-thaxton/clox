@@ -46,6 +46,14 @@ bool Parser::had_error() {
     return error_count > 0;
 }
 
+int Parser::line() {
+    return previous.line;
+}
+
+int Parser::line_at_current() {
+    return current.line;
+}
+
 void Parser::advance() {
     previous = current;
 
@@ -61,10 +69,47 @@ void Parser::advance() {
 }
 
 void Parser::consume(TokenType type, const char* msg) {
-    if (current.type == type) {
+    if (check(type)) {
         advance();
-        return;
+    } else {
+        error_at_current(msg);
     }
-
-    error_at_current(msg);
 }
+
+bool Parser::match(TokenType type) {
+    if (check(type)) {
+        advance();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Parser::check(TokenType type) {
+    return current.type == type;
+}
+
+void Parser::synchronize() {
+    panic_mode = false;
+
+    while (current.type != TOKEN_EOF) {
+        if (previous.type == TOKEN_SEMICOLON) return;
+        switch (current.type) {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+
+            default:
+                ; // Do nothing.
+        }
+
+        advance();
+    }
+}
+

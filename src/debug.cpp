@@ -86,6 +86,11 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_simple_inst("OP_NEGATE", offset);
     case OP_NOT:
         return print_simple_inst("OP_NOT", offset);
+
+    case OP_POP:
+        return print_simple_inst("OP_POP", offset);
+    case OP_PRINT:
+        return print_simple_inst("OP_PRINT", offset);
     case OP_RETURN:
         return print_simple_inst("OP_RETURN", offset);
 
@@ -121,7 +126,7 @@ void print_value(Value value) {
 void print_object(Obj* object) {
     switch (object->type) {
         case OBJ_STRING: {
-            printf("\"%s\"", ((ObjString*) object)->chars);
+            printf("%s", ((ObjString*) object)->chars);
             return;
         }
     }
