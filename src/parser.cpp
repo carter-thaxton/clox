@@ -18,6 +18,30 @@ void Parser::init(const char* src) {
 // Tokens
 //
 
+
+bool Parser::check(TokenType type) const {
+    return current.type == type;
+}
+
+bool Parser::match(TokenType type) {
+    if (check(type)) {
+        advance();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool Parser::consume(TokenType type, const char* msg) {
+    if (check(type)) {
+        advance();
+        return true;
+    } else {
+        error_at_current(msg);
+        return false;
+    }
+}
+
 void Parser::advance() {
     previous = current;
 
@@ -30,27 +54,6 @@ void Parser::advance() {
             break;
         }
     }
-}
-
-void Parser::consume(TokenType type, const char* msg) {
-    if (check(type)) {
-        advance();
-    } else {
-        error_at_current(msg);
-    }
-}
-
-bool Parser::match(TokenType type) {
-    if (check(type)) {
-        advance();
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool Parser::check(TokenType type) const {
-    return current.type == type;
 }
 
 

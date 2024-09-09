@@ -1,6 +1,7 @@
 
 #include "chunk.h"
 #include "memory.h"
+#include <assert.h>
 
 Chunk::Chunk() {
     this->code = NULL;
@@ -32,8 +33,9 @@ void Chunk::write(uint8_t byte, int line) {
     this->length++;
 }
 
-int Chunk::write_constant(Value value, int line) {
-    int constant = this->add_constant(value);
+void Chunk::write_constant(int constant, int line) {
+    assert(constant >= 0 && constant < MAX_CONSTANTS);
+
     if (constant < 256) {
         // 8-bit constant index
         this->write(OP_CONSTANT, line);
@@ -44,7 +46,7 @@ int Chunk::write_constant(Value value, int line) {
         this->write((uint8_t) (constant & 0xFF), line);
         constant >>= 8;
         this->write((uint8_t) (constant & 0xFF), line);
-    } else if (constant < MAX_CONSTANTS) {
+    } else {
         // 24-bit constant index
         this->write(OP_CONSTANT_24, line);
         this->write((uint8_t) (constant & 0xFF), line);
@@ -53,10 +55,15 @@ int Chunk::write_constant(Value value, int line) {
         constant >>= 8;
         this->write((uint8_t) (constant & 0xFF), line);
     }
+}
+
+int Chunk::write_constant_value(Value value, int line) {
+    int constant = this->add_constant_value(value);
+    write_constant(constant, line);
     return constant;
 }
 
-int Chunk::add_constant(Value value) {
+int Chunk::add_constant_value(Value value) {
     int index = this->constants.length;
     this->constants.write(value);
     return index;

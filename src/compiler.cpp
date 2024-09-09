@@ -106,11 +106,13 @@ static void emit_bytes(uint8_t byte1, uint8_t byte2, int line) {
     emit_byte(byte2, line);
 }
 
-static void emit_constant(Value value) {
-    int index = current_chunk()->write_constant(value, parser.line());
+static int emit_constant(Value value) {
+    int index = current_chunk()->write_constant_value(value, parser.line());
     if (index >= MAX_CONSTANTS) {
         parser.error("Too many constants in one chunk.");
+        return -1;
     }
+    return index;
 }
 
 static void emit_return(int line) {
@@ -127,6 +129,30 @@ static void end_compiler() {
     #endif
 }
 
+// create and register a string object, and add string as a constant value to chunk
+// return the constant index, or -1 on failure
+static int make_identifier_constant(Token* token) {
+    Value value = string_value(compiling_vm, token->start, token->length);
+    if (IS_NIL(value)) { parser.error("String too long."); return -1; }
+
+    int index = current_chunk()->add_constant_value(value);
+    if (index >= MAX_CONSTANTS) {
+        parser.error("Too many constants in one chunk.");
+        return -1;
+    }
+
+    return index;
+}
+
+// return the constant index on success
+// return -1 and produce parser error on failure
+static int parse_variable(const char* err_msg) {
+    if (parser.consume(TOKEN_IDENTIFIER, err_msg)) {
+        return make_identifier_constant(&parser.previous);
+    } else {
+        return -1;
+    }
+}
 
 //
 // Expressions

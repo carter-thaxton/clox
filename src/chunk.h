@@ -34,9 +34,10 @@ struct Chunk {
     ~Chunk();
 
     void write(uint8_t byte, int line);
-    int write_constant(Value value, int line);
+    void write_constant(int constant, int line);
 
-    int add_constant(Value value);
+    int write_constant_value(Value value, int line);
+    int add_constant_value(Value value);
 
     uint8_t* code;
     int* lines;

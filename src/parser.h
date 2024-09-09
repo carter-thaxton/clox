@@ -8,10 +8,11 @@ struct Parser {
     ~Parser();
 
     void init(const char* src);
-    void advance();
-    void consume(TokenType type, const char* msg);
-    bool match(TokenType type);
+
     bool check(TokenType type) const;
+    bool match(TokenType type);
+    bool consume(TokenType type, const char* msg);
+    void advance();
 
     void error(const char* msg);  // commonly at previous
     void error_at_current(const char* msg);
