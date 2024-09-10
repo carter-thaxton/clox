@@ -106,6 +106,19 @@ inline InterpretResult VM::run() {
 
         switch (inst) {
 
+        case OP_NIL: {
+            push(NIL_VAL);
+            break;
+        }
+        case OP_TRUE: {
+            push(BOOL_VAL(true));
+            break;
+        }
+        case OP_FALSE: {
+            push(BOOL_VAL(false));
+            break;
+        }
+
         case OP_CONSTANT: {
             Value val = read_constant();
             push(val);
@@ -121,16 +134,23 @@ inline InterpretResult VM::run() {
             push(val);
             break;
         }
-        case OP_NIL: {
-            push(NIL_VAL);
+
+        case OP_DEFINE_GLOBAL: {
+            ObjString* name = AS_STRING(read_constant());
+            globals.insert(name, peek(0));
+            pop();
             break;
         }
-        case OP_TRUE: {
-            push(BOOL_VAL(true));
+        case OP_DEFINE_GLOBAL_16: {
+            ObjString* name = AS_STRING(read_constant_16());
+            globals.insert(name, peek(0));
+            pop();
             break;
         }
-        case OP_FALSE: {
-            push(BOOL_VAL(false));
+        case OP_DEFINE_GLOBAL_24: {
+            ObjString* name = AS_STRING(read_constant_24());
+            globals.insert(name, peek(0));
+            pop();
             break;
         }
 

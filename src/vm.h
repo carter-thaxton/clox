@@ -22,9 +22,13 @@ public:
 
     void register_object(Obj* object);
 
+    // for debugging
     int get_object_count() { return object_count; }
     int get_string_count() { return strings.get_count(); }
     int get_string_capacity() { return strings.get_capacity(); }
+    Chunk* get_chunk() { return chunk; }
+    Table* get_strings() { return &strings; }
+    Table* get_globals() { return &globals; }
 
 private:
     // some fast-path inlined functions
@@ -47,6 +51,7 @@ private:
     int object_count;
     Obj* objects;
     Table strings;
+    Table globals;
     Value* stack_top;
     Value stack[STACK_MAX];
 

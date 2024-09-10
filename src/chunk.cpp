@@ -19,6 +19,16 @@ Chunk::~Chunk() {
     this->length = 0;
 }
 
+void Chunk::reset() {
+    if (this->code)
+        FREE_ARRAY(uint8_t, this->code, this->capacity);
+
+    this->code = NULL;
+    this->lines = NULL;
+    this->capacity = 0;
+    this->length = 0;
+}
+
 void Chunk::write(uint8_t byte, int line) {
     if (this->capacity < this->length + 1) {
         int old_capacity = this->capacity;

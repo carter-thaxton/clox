@@ -18,13 +18,11 @@
 #define EX_IOERR    (74)    // I/O error
 
 
-InterpretResult interpret(VM* vm, const char* src) {
-    Chunk chunk;
-
-    bool ok = compile(src, &chunk, vm);
+InterpretResult interpret(VM* vm, Chunk* chunk, const char* src) {
+    bool ok = compile(src, chunk, vm);
     if (!ok) return INTERPRET_COMPILE_ERROR;
 
-    return vm->interpret(&chunk);
+    return vm->interpret(chunk);
 }
 
 void debug(VM* vm) {
@@ -32,10 +30,28 @@ void debug(VM* vm) {
         vm->get_object_count(),
         vm->get_string_count(),
         vm->get_string_capacity());
+
+    printf("globals:\n");
+    print_table(vm->get_globals());
+    printf("\n");
+
+    printf("strings:\n");
+    print_table(vm->get_strings());
+    printf("\n");
+
+    Chunk* chunk = vm->get_chunk();
+    if (chunk) {
+        printf("constants:\n");
+        print_value_array(&chunk->constants);
+        printf("\n");
+
+        print_chunk(chunk, "code");
+    }
 }
 
 void repl() {
     VM vm;
+    Chunk chunk;
 
     while (true) {
         char *line = readline("> ");
@@ -48,7 +64,8 @@ void repl() {
             if (strcmp(line, "debug") == 0) {
                 debug(&vm);
             } else {
-                interpret(&vm, line);
+                chunk.reset();
+                interpret(&vm, &chunk, line);
             }
         }
 
@@ -86,9 +103,10 @@ char* read_file(const char* path) {
 
 void run_file(const char* path) {
     VM vm;
+    Chunk chunk;
 
     char *file = read_file(path);
-    int result = interpret(&vm, file);
+    int result = interpret(&vm, &chunk, file);
     free(file);
 
     if (result == INTERPRET_COMPILE_ERROR) exit(EX_DATAERR);

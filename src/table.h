@@ -29,4 +29,6 @@ private:
     int capacity;
     int count;
     int count_with_tombstones;
+
+    friend void print_table(Table* table);
 };

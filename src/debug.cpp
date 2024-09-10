@@ -54,18 +54,26 @@ int print_instruction(Chunk* chunk, int offset) {
     uint8_t inst = chunk->code[offset];
 
     switch (inst) {
-    case OP_CONSTANT:
-        return print_constant_inst("OP_CONSTANT", chunk, offset);
-    case OP_CONSTANT_16:
-        return print_constant_16_inst("OP_CONSTANT_16", chunk, offset);
-    case OP_CONSTANT_24:
-        return print_constant_24_inst("OP_CONSTANT_24", chunk, offset);
     case OP_NIL:
         return print_simple_inst("OP_NIL", offset);
     case OP_TRUE:
         return print_simple_inst("OP_TRUE", offset);
     case OP_FALSE:
         return print_simple_inst("OP_FALSE", offset);
+
+    case OP_CONSTANT:
+        return print_constant_inst("OP_CONSTANT", chunk, offset);
+    case OP_CONSTANT_16:
+        return print_constant_16_inst("OP_CONSTANT_16", chunk, offset);
+    case OP_CONSTANT_24:
+        return print_constant_24_inst("OP_CONSTANT_24", chunk, offset);
+
+    case OP_DEFINE_GLOBAL:
+        return print_constant_inst("OP_DEFINE_GLOBAL", chunk, offset);
+    case OP_DEFINE_GLOBAL_16:
+        return print_constant_inst("OP_DEFINE_GLOBAL_16", chunk, offset);
+    case OP_DEFINE_GLOBAL_24:
+        return print_constant_inst("OP_DEFINE_GLOBAL_24", chunk, offset);
 
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
@@ -123,11 +131,31 @@ void print_value(Value value) {
     printf("Unrecognized value type\n");
 }
 
+void print_value_array(ValueArray* array) {
+    for (int i = 0; i < array->length; i++) {
+        printf(" %3d: ", i);
+        print_value(array->values[i]);
+        printf("\n");
+    }
+}
+
+
 void print_object(Obj* object) {
     switch (object->type) {
         case OBJ_STRING: {
             printf("%s", ((ObjString*) object)->chars);
             return;
         }
+    }
+}
+
+void print_table(Table* table) {
+    for (int i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+        if (entry->key == NULL) continue;  // also skip tombstones
+
+        printf("    %10s = ", entry->key->chars);
+        print_value(entry->value);
+        printf("\n");
     }
 }
