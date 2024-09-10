@@ -41,3 +41,11 @@ clean:
 .PHONY: rebuild r
 r: rebuild
 rebuild: clean all
+
+# tests
+.PHONY: test
+test: test/test.pyc
+	./run_tests.sh
+
+test/test.pyc: test/test.py
+	python3 -m compileall -b test/test.py

@@ -16,11 +16,13 @@ done
 # default arg is test directory
 [ $# -eq 0 ] && set -- test
 
+cmd="python3 test/test.pyc"
+
 PASS=0
 FAIL=0
 for arg in "$@"; do
   while read -r file; do
-    output="$(test/test.py "$file" 2>&1)";
+    output="$($cmd "$file" 2>&1)";
 
     if [[ "$?" == 0 ]]; then
       if [[ -z "$no_pass" ]]; then
