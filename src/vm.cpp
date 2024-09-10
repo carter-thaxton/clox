@@ -187,24 +187,21 @@ inline InterpretResult VM::run() {
 
         case OP_SET_GLOBAL: {
             ObjString* name = AS_STRING(read_constant());
-            if (globals.insert(name, peek(0))) {
-                globals.remove(name);
+            if (!globals.set(name, peek(0))) {
                 return runtime_error("Undefined variable '%s'.", name->chars);
             }
             break;
         }
         case OP_SET_GLOBAL_16: {
             ObjString* name = AS_STRING(read_constant_16());
-            if (globals.insert(name, peek(0))) {
-                globals.remove(name);
+            if (!globals.set(name, peek(0))) {
                 return runtime_error("Undefined variable '%s'.", name->chars);
             }
             break;
         }
         case OP_SET_GLOBAL_24: {
             ObjString* name = AS_STRING(read_constant_24());
-            if (globals.insert(name, peek(0))) {
-                globals.remove(name);
+            if (!globals.set(name, peek(0))) {
                 return runtime_error("Undefined variable '%s'.", name->chars);
             }
             break;

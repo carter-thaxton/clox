@@ -48,9 +48,19 @@ bool Table::get(ObjString* key, Value* out_value) {
     if (this->count == 0) return false;
 
     Entry* entry = find_entry_helper(this->entries, this->capacity, key);
-    if (entry == NULL) return false;
+    if (entry->key == NULL) return false;
 
     if (out_value) *out_value = entry->value;
+    return true;
+}
+
+bool Table::set(ObjString* key, Value value) {
+    if (this->count == 0) return false;
+
+    Entry* entry = find_entry_helper(this->entries, this->capacity, key);
+    if (entry->key == NULL) return false;
+
+    entry->value = value;
     return true;
 }
 
