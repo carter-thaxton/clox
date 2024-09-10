@@ -71,23 +71,23 @@ int print_instruction(Chunk* chunk, int offset) {
     case OP_DEFINE_GLOBAL:
         return print_constant_inst("OP_DEFINE_GLOBAL", chunk, offset);
     case OP_DEFINE_GLOBAL_16:
-        return print_constant_inst("OP_DEFINE_GLOBAL_16", chunk, offset);
+        return print_constant_16_inst("OP_DEFINE_GLOBAL_16", chunk, offset);
     case OP_DEFINE_GLOBAL_24:
-        return print_constant_inst("OP_DEFINE_GLOBAL_24", chunk, offset);
+        return print_constant_24_inst("OP_DEFINE_GLOBAL_24", chunk, offset);
 
     case OP_GET_GLOBAL:
         return print_constant_inst("OP_GET_GLOBAL", chunk, offset);
     case OP_GET_GLOBAL_16:
-        return print_constant_inst("OP_GET_GLOBAL_16", chunk, offset);
+        return print_constant_16_inst("OP_GET_GLOBAL_16", chunk, offset);
     case OP_GET_GLOBAL_24:
-        return print_constant_inst("OP_GET_GLOBAL_24", chunk, offset);
+        return print_constant_24_inst("OP_GET_GLOBAL_24", chunk, offset);
 
     case OP_SET_GLOBAL:
         return print_constant_inst("OP_SET_GLOBAL", chunk, offset);
     case OP_SET_GLOBAL_16:
-        return print_constant_inst("OP_SET_GLOBAL_16", chunk, offset);
+        return print_constant_16_inst("OP_SET_GLOBAL_16", chunk, offset);
     case OP_SET_GLOBAL_24:
-        return print_constant_inst("OP_SET_GLOBAL_24", chunk, offset);
+        return print_constant_24_inst("OP_SET_GLOBAL_24", chunk, offset);
 
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
