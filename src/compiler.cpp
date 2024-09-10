@@ -23,7 +23,7 @@ enum Precedence {
     PREC_PRIMARY
 };
 
-typedef void (*ParseFn)();
+typedef void (*ParseFn)(bool lvalue);
 
 struct ParseRule {
     ParseFn prefix;
@@ -32,13 +32,13 @@ struct ParseRule {
 };
 
 // forward declarations
-static void grouping();
-static void unary();
-static void binary();
-static void number();
-static void literal();
-static void string();
-static void variable();
+static void grouping(bool lvalue);
+static void unary(bool lvalue);
+static void binary(bool lvalue);
+static void number(bool lvalue);
+static void literal(bool lvalue);
+static void string(bool lvalue);
+static void variable(bool lvalue);
 
 static ParseRule rules[] = {
     [TOKEN_EOF]             = {NULL,     NULL,   PREC_NONE},
@@ -181,13 +181,14 @@ static void parse_precedence(Precedence precedence) {
     parser.advance();
     ParseFn prefix_rule = get_rule(parser.previous.type)->prefix;
     if (!prefix_rule) return parser.error("Expect expression.");
-    prefix_rule();
+    bool lvalue = precedence <= PREC_ASSIGNMENT;
+    prefix_rule(lvalue);
 
     while (precedence <= get_rule(parser.current.type)->precedence) {
         parser.advance();
         ParseFn infix_rule = get_rule(parser.previous.type)->infix;
         if (!infix_rule) return parser.error("missing infix function");
-        infix_rule();
+        infix_rule(lvalue);
     }
 }
 
@@ -195,12 +196,12 @@ static void expression() {
     parse_precedence(PREC_ASSIGNMENT);
 }
 
-static void number() {
+static void number(bool _lvalue) {
     double value = strtod(parser.previous.start, NULL);
     emit_constant(NUMBER_VAL(value));
 }
 
-static void literal() {
+static void literal(bool _lvalue) {
     int line = parser.line();
     TokenType op_type = parser.previous.type;
 
@@ -213,7 +214,7 @@ static void literal() {
     }
 }
 
-static void string() {
+static void string(bool _lvalue) {
     const char* str = parser.previous.start + 1;    // skip opening "
     int length = parser.previous.length - 2;        // without opening and closing ""
     Value val = string_value(compiling_vm, str, length);
@@ -221,12 +222,12 @@ static void string() {
     emit_constant(val);
 }
 
-static void grouping() {
+static void grouping(bool _lvalue) {
     expression();
     parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-static void unary() {
+static void unary(bool _lvalue) {
     int line = parser.line();
     TokenType op_type = parser.previous.type;
 
@@ -241,7 +242,7 @@ static void unary() {
     }
 }
 
-static void binary() {
+static void binary(bool _lvalue) {
     int line = parser.line();
     TokenType op_type = parser.previous.type;
     ParseRule* rule = get_rule(op_type);
@@ -266,11 +267,11 @@ static void binary() {
     }
 }
 
-static void variable() {
+static void variable(bool lvalue) {
     int line = parser.line();
     int constant = make_identifier_constant(&parser.previous);
 
-    if (parser.match(TOKEN_EQUAL)) {
+    if (lvalue && parser.match(TOKEN_EQUAL)) {
         expression();
         emit_set_global(constant, line);
     } else {
