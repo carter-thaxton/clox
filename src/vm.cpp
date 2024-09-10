@@ -154,6 +154,37 @@ inline InterpretResult VM::run() {
             break;
         }
 
+        case OP_GET_GLOBAL: {
+            ObjString* name = AS_STRING(read_constant());
+            Value val;
+            if (globals.get(name, &val)) {
+                push(val);
+            } else {
+                return runtime_error("Undefined variable '%s'.", name->chars);
+            }
+            break;
+        }
+        case OP_GET_GLOBAL_16: {
+            ObjString* name = AS_STRING(read_constant_16());
+            Value val;
+            if (globals.get(name, &val)) {
+                push(val);
+            } else {
+                return runtime_error("Undefined variable '%s'.", name->chars);
+            }
+            break;
+        }
+        case OP_GET_GLOBAL_24: {
+            ObjString* name = AS_STRING(read_constant_24());
+            Value val;
+            if (globals.get(name, &val)) {
+                push(val);
+            } else {
+                return runtime_error("Undefined variable '%s'.", name->chars);
+            }
+            break;
+        }
+
         case OP_ADD: {
             if (IS_STRING(peek(0)) && IS_STRING(peek(1))) {
                 Value b = pop();

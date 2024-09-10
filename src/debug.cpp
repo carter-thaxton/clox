@@ -75,6 +75,13 @@ int print_instruction(Chunk* chunk, int offset) {
     case OP_DEFINE_GLOBAL_24:
         return print_constant_inst("OP_DEFINE_GLOBAL_24", chunk, offset);
 
+    case OP_GET_GLOBAL:
+        return print_constant_inst("OP_GET_GLOBAL", chunk, offset);
+    case OP_GET_GLOBAL_16:
+        return print_constant_inst("OP_GET_GLOBAL_16", chunk, offset);
+    case OP_GET_GLOBAL_24:
+        return print_constant_inst("OP_GET_GLOBAL_24", chunk, offset);
+
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
     case OP_SUBTRACT:

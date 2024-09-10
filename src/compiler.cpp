@@ -38,6 +38,7 @@ static void binary();
 static void number();
 static void literal();
 static void string();
+static void variable();
 
 static ParseRule rules[] = {
     [TOKEN_EOF]             = {NULL,     NULL,   PREC_NONE},
@@ -64,7 +65,7 @@ static ParseRule rules[] = {
     [TOKEN_LESS]            = {NULL,     binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL]      = {NULL,     binary, PREC_COMPARISON},
 
-    [TOKEN_IDENTIFIER]      = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_IDENTIFIER]      = {variable, NULL,   PREC_NONE},
     [TOKEN_STRING]          = {string,   NULL,   PREC_NONE},
     [TOKEN_NUMBER]          = {number,   NULL,   PREC_NONE},
 
@@ -117,6 +118,10 @@ static int emit_constant(Value value) {
 
 static void emit_define_global(int constant, int line) {
     current_chunk()->write_define_global(constant, line);
+}
+
+static void emit_get_global(int constant, int line) {
+    current_chunk()->write_get_global(constant, line);
 }
 
 static void emit_return(int line) {
@@ -255,6 +260,12 @@ static void binary() {
 
         default: return parser.error("unreachable binary operator");
     }
+}
+
+static void variable() {
+    int line = parser.line();
+    int constant = make_identifier_constant(&parser.previous);
+    emit_get_global(constant, line);
 }
 
 //
