@@ -13,8 +13,12 @@ static void print_constant(const char* name, Chunk* chunk, int constant) {
     printf("'\n");
 }
 
+static void print_index(const char* name, Chunk* chunk, int index) {
+    printf("%-16s %4d\n", name, index);
+}
+
 static int print_constant_inst(const char* name, Chunk* chunk, int offset) {
-    uint8_t constant = chunk->code[offset + 1];
+    int constant = chunk->code[offset + 1];
     print_constant(name, chunk, constant);
     return offset + 2;
 }
@@ -31,6 +35,27 @@ static int print_constant_24_inst(const char* name, Chunk* chunk, int offset) {
     constant |= chunk->code[offset + 2] << 8;
     constant |= chunk->code[offset + 3] << 16;
     print_constant(name, chunk, constant);
+    return offset + 4;
+}
+
+static int print_index_inst(const char* name, Chunk* chunk, int offset) {
+    int index = chunk->code[offset + 1];
+    print_index(name, chunk, index);
+    return offset + 2;
+}
+
+static int print_index_16_inst(const char* name, Chunk* chunk, int offset) {
+    int index = chunk->code[offset + 1];
+    index |= chunk->code[offset + 2] << 8;
+    print_index(name, chunk, index);
+    return offset + 3;
+}
+
+static int print_index_24_inst(const char* name, Chunk* chunk, int offset) {
+    int index = chunk->code[offset + 1];
+    index |= chunk->code[offset + 2] << 8;
+    index |= chunk->code[offset + 3] << 16;
+    print_index(name, chunk, index);
     return offset + 4;
 }
 
@@ -88,6 +113,20 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_constant_16_inst("OP_SET_GLOBAL_16", chunk, offset);
     case OP_SET_GLOBAL_24:
         return print_constant_24_inst("OP_SET_GLOBAL_24", chunk, offset);
+
+    case OP_GET_LOCAL:
+        return print_index_inst("OP_GET_LOCAL", chunk, offset);
+    case OP_GET_LOCAL_16:
+        return print_index_16_inst("OP_GET_LOCAL_16", chunk, offset);
+    case OP_GET_LOCAL_24:
+        return print_index_24_inst("OP_GET_LOCAL_24", chunk, offset);
+
+    case OP_SET_LOCAL:
+        return print_index_inst("OP_SET_LOCAL", chunk, offset);
+    case OP_SET_LOCAL_16:
+        return print_index_16_inst("OP_SET_LOCAL_16", chunk, offset);
+    case OP_SET_LOCAL_24:
+        return print_index_24_inst("OP_SET_LOCAL_24", chunk, offset);
 
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);

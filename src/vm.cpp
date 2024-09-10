@@ -61,21 +61,30 @@ inline uint8_t VM::read_byte() {
     return *this->ip++;
 };
 
+inline int VM::read_index_16() {
+    int index = this->read_byte();
+    index |= this->read_byte() << 8;
+    return index;
+}
+
+inline int VM::read_index_24() {
+    int index = this->read_byte();
+    index |= this->read_byte() << 8;
+    return index;
+}
+
 inline Value VM::read_constant() {
     int constant = this->read_byte();
     return this->chunk->constants.values[constant];
 }
 
 inline Value VM::read_constant_16() {
-    int constant = this->read_byte();
-    constant |= this->read_byte() << 8;
+    int constant = this->read_index_16();
     return this->chunk->constants.values[constant];
 }
 
 inline Value VM::read_constant_24() {
-    int constant = this->read_byte();
-    constant |= this->read_byte() << 8;
-    constant |= this->read_byte() << 16;
+    int constant = this->read_index_24();
     return this->chunk->constants.values[constant];
 }
 
@@ -204,6 +213,38 @@ inline InterpretResult VM::run() {
             if (!globals.set(name, peek(0))) {
                 return runtime_error("Undefined variable '%s'.", name->chars);
             }
+            break;
+        }
+
+        case OP_GET_LOCAL: {
+            int index = read_byte();
+            push(this->stack[index]);
+            break;
+        }
+        case OP_GET_LOCAL_16: {
+            int index = read_index_16();
+            push(this->stack[index]);
+            break;
+        }
+        case OP_GET_LOCAL_24: {
+            int index = read_index_24();
+            push(this->stack[index]);
+            break;
+        }
+
+        case OP_SET_LOCAL: {
+            int index = read_byte();
+            this->stack[index] = peek(0);
+            break;
+        }
+        case OP_SET_LOCAL_16: {
+            int index = read_index_16();
+            this->stack[index] = peek(0);
+            break;
+        }
+        case OP_SET_LOCAL_24: {
+            int index = read_index_24();
+            this->stack[index] = peek(0);
             break;
         }
 

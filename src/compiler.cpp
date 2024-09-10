@@ -2,7 +2,10 @@
 #include "parser.h"
 #include "chunk.h"
 #include "vm.h"
+
 #include <stdlib.h>     // strtod
+#include <string.h>     // memcmp
+#include <assert.h>
 
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
@@ -29,6 +32,11 @@ struct ParseRule {
     ParseFn prefix;
     ParseFn infix;
     Precedence precedence;
+};
+
+struct Local {
+    Token name;
+    int depth;
 };
 
 // forward declarations
@@ -92,6 +100,10 @@ static ParseRule rules[] = {
 static Parser parser;
 static Chunk *compiling_chunk;
 static VM *compiling_vm;
+
+static Local locals[MAX_INDEX+1];  // TODO: put into a struct, maybe a growable array?
+static int local_count;
+static int scope_depth;
 
 
 static Chunk* current_chunk() {
@@ -165,14 +177,114 @@ static int make_identifier_constant(Token* token) {
     return index;
 }
 
-// parse identifier as variable name, make string object, and add as a constant value to chunk
-// return the constant index on success
+// compare two identifier tokens
+static bool identifiers_equal(Token* token1, Token* token2) {
+    if (token1->type != TOKEN_IDENTIFIER) return false;
+    if (token2->type != TOKEN_IDENTIFIER) return false;
+    if (token1->length != token2->length) return false;
+    return memcmp(token1->start, token2->start, token1->length) == 0;
+}
+
+// returns true on success, false with error on too many locals
+static bool declare_local(Token* token) {
+    if (local_count >= MAX_INDEX) {
+        parser.error("Too many local variables in function.");
+        return false;
+    }
+
+    Local* local = &locals[local_count++];
+    local->name = *token;
+    local->depth = -1;  // declare only - set to scope_depth later in define_local()
+    return true;
+}
+
+// defines the most recently declared variable, returning its index
+// assertion error if called without corresponding declare_local()
+static int define_local() {
+    assert(local_count > 0);
+    int index = local_count - 1;
+    Local* local = &locals[local_count];
+    assert(local->depth < 0);
+    local->depth = scope_depth;
+    return index;
+}
+
+// lookup a local variable by name
+// return a non-negative local index on success, and -1 if not found or error
+static int resolve_local(Token* name) {
+    for (int i = local_count - 1; i >= 0; i--) {
+        Local* local = &locals[i];
+        if (identifiers_equal(&local->name, name)) {
+            if (local->depth < 0) {
+                parser.error("Can't read local variable in its own initializer.");
+                return -1;
+            }
+            return i;
+        }
+    }
+    return -1;
+}
+
+// returns true on success, false with error
+static bool declare_variable() {
+    // nothing to do in global scope, and always allowed to redeclare a new global
+    if (scope_depth <= 0) return true;
+
+    Token* name = &parser.previous;
+
+    // check if already declared in local scope
+    for (int i = local_count - 1; i >= 0; i--) {
+        Local* local = &locals[i];
+        if (local->depth >= 0 && local->depth < scope_depth) {
+            // reached outer scope, ok to declare
+            break;
+        }
+
+        if (identifiers_equal(&local->name, name)) {
+            parser.error("Already a variable with this name in this scope.");
+            return false;
+        }
+    }
+
+    return declare_local(name);
+}
+
+// parse identifier as variable name
+// in local scope, checks and registers as local variable
+// in global scope, makes string object, and adds as a constant value to chunk
+// return the local or global constant index on success
 // return -1 and produce parser error on failure
 static int parse_variable(const char* err_msg) {
-    if (parser.consume(TOKEN_IDENTIFIER, err_msg)) {
-        return make_identifier_constant(&parser.previous);
+    if (!parser.consume(TOKEN_IDENTIFIER, err_msg)) return -1;
+
+    if (!declare_variable()) return -1;
+
+    if (scope_depth > 0) {
+        // local - index is the most recently declared variable above
+        return define_local();
     } else {
-        return -1;
+        // global - index is to a constant for variable name
+        return make_identifier_constant(&parser.previous);
+    }
+}
+
+static void begin_scope() {
+    scope_depth++;
+}
+
+static void end_scope() {
+    scope_depth--;
+
+    int locals_to_pop = 0;
+    while (local_count > 0 && locals[local_count-1].depth > scope_depth) {
+        locals_to_pop++;
+        local_count--;
+    }
+
+    // TODO: optimize with OP_POPN instruction
+    int line = parser.line();
+    for (int i = 0; i < locals_to_pop; i++) {
+        emit_byte(OP_POP, line);
     }
 }
 
@@ -282,19 +394,31 @@ static void binary(bool _lvalue) {
 
 static void variable(bool lvalue) {
     int line = parser.line();
-    int constant = make_identifier_constant(&parser.previous);
 
-    if (lvalue && parser.match(TOKEN_EQUAL)) {
-        expression();
-        emit_set_global(constant, line);
+    int index = resolve_local(&parser.previous);
+    if (index >= 0) {
+        if (lvalue && parser.match(TOKEN_EQUAL)) {
+            expression();
+            emit_set_local(index, line);
+        } else {
+            emit_get_local(index, line);
+        }
     } else {
-        emit_get_global(constant, line);
+        int constant = make_identifier_constant(&parser.previous);
+        if (lvalue && parser.match(TOKEN_EQUAL)) {
+            expression();
+            emit_set_global(constant, line);
+        } else {
+            emit_get_global(constant, line);
+        }
     }
 }
 
 //
 // Statements
 //
+
+static void declaration();
 
 static void expression_stmt() {
     int line = parser.line();
@@ -310,17 +434,29 @@ static void print_stmt() {
     emit_byte(OP_PRINT, line);
 }
 
+static void block() {
+    while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
+        declaration();
+    }
+    parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
 static void statement() {
     if (parser.match(TOKEN_PRINT)) {
         print_stmt();
+    } else if (parser.match(TOKEN_LEFT_BRACE)) {
+        begin_scope();
+        block();
+        end_scope();
     } else {
         expression_stmt();
     }
 }
 
 static void var_decl() {
-    int global = parse_variable("Expect variable name.");
-    if (global < 0) return;
+    int index = parse_variable("Expect variable name.");
+    if (index < 0) return;
+
     int line = parser.line();
 
     if (parser.match(TOKEN_EQUAL)) {
@@ -333,8 +469,11 @@ static void var_decl() {
 
     parser.consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
 
-    // TODO: handle local variables
-    emit_define_global(global, line);
+    if (scope_depth > 0) {
+        // nothing to do to for local variables
+    } else {
+        emit_define_global(index, line);
+    }
 }
 
 static void declaration() {
@@ -357,6 +496,9 @@ bool compile(const char* src, Chunk* chunk, VM* vm) {
     parser.init(src);
     compiling_chunk = chunk;
     compiling_vm = vm;
+
+    local_count = 0;
+    scope_depth = 0;
 
     while (!parser.match(TOKEN_EOF)) {
         declaration();
