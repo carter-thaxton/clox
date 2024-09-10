@@ -94,8 +94,15 @@ int Chunk::write_constant_value(Value value, int line) {
 }
 
 int Chunk::add_constant_value(Value value) {
-    // TODO: check if this constant value already exists, and avoid duplication?
-    int index = this->constants.length;
+    // check if value has already been added
+    int length = this->constants.length;
+    for (int i = 0; i < length; i++) {
+        if (values_equal(this->constants.values[i], value)) {
+            return i;
+        }
+    }
+
+    // didn't find it - add to end
     this->constants.write(value);
-    return index;
+    return length;
 }
