@@ -109,7 +109,7 @@ static void emit_bytes(uint8_t byte1, uint8_t byte2, int line) {
 
 static int emit_constant(Value value) {
     int index = current_chunk()->write_constant_value(value, parser.line());
-    if (index >= MAX_CONSTANTS) {
+    if (index > MAX_INDEX) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
@@ -126,6 +126,14 @@ static void emit_get_global(int constant, int line) {
 
 static void emit_set_global(int constant, int line) {
     current_chunk()->write_set_global(constant, line);
+}
+
+static void emit_get_local(int index, int line) {
+    current_chunk()->write_get_local(index, line);
+}
+
+static void emit_set_local(int index, int line) {
+    current_chunk()->write_set_local(index, line);
 }
 
 static void emit_return(int line) {
@@ -149,7 +157,7 @@ static int make_identifier_constant(Token* token) {
     if (IS_NIL(value)) { parser.error("String too long."); return -1; }
 
     int index = current_chunk()->add_constant_value(value);
-    if (index >= MAX_CONSTANTS) {
+    if (index > MAX_INDEX) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
@@ -178,10 +186,11 @@ static ParseRule* get_rule(TokenType op_type) {
 }
 
 static void expr_precedence(Precedence precedence) {
+    bool lvalue = precedence <= PREC_ASSIGNMENT;
+
     parser.advance();
     ParseFn prefix_rule = get_rule(parser.previous.type)->prefix;
     if (!prefix_rule) return parser.error("Expect expression.");
-    bool lvalue = precedence <= PREC_ASSIGNMENT;
     prefix_rule(lvalue);
 
     while (precedence <= get_rule(parser.current.type)->precedence) {

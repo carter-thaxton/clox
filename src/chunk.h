@@ -3,7 +3,7 @@
 #include "common.h"
 #include "value.h"
 
-#define MAX_CONSTANTS (1 << 24)
+#define MAX_INDEX ((1 << 24) - 1)
 
 enum OpCode {
     OP_NIL,
@@ -25,6 +25,14 @@ enum OpCode {
     OP_SET_GLOBAL,
     OP_SET_GLOBAL_16,
     OP_SET_GLOBAL_24,
+
+    OP_GET_LOCAL,
+    OP_GET_LOCAL_16,
+    OP_GET_LOCAL_24,
+
+    OP_SET_LOCAL,
+    OP_SET_LOCAL_16,
+    OP_SET_LOCAL_24,
 
     OP_ADD,
     OP_SUBTRACT,
@@ -54,6 +62,8 @@ struct Chunk {
     void write_define_global(int constant, int line);
     void write_get_global(int constant, int line);
     void write_set_global(int constant, int line);
+    void write_get_local(int index, int line);
+    void write_set_local(int index, int line);
 
     int write_constant_value(Value value, int line);
     int add_constant_value(Value value);
