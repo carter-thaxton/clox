@@ -83,6 +83,10 @@ void Chunk::write_get_global(int constant, int line) {
     write_constant_op(this, OP_GET_GLOBAL, constant, line);
 }
 
+void Chunk::write_set_global(int constant, int line) {
+    write_constant_op(this, OP_SET_GLOBAL, constant, line);
+}
+
 int Chunk::write_constant_value(Value value, int line) {
     int constant = this->add_constant_value(value);
     write_constant(constant, line);

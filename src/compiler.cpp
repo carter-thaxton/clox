@@ -124,6 +124,10 @@ static void emit_get_global(int constant, int line) {
     current_chunk()->write_get_global(constant, line);
 }
 
+static void emit_set_global(int constant, int line) {
+    current_chunk()->write_set_global(constant, line);
+}
+
 static void emit_return(int line) {
     emit_byte(OP_RETURN, line);
 }
@@ -265,7 +269,13 @@ static void binary() {
 static void variable() {
     int line = parser.line();
     int constant = make_identifier_constant(&parser.previous);
-    emit_get_global(constant, line);
+
+    if (parser.match(TOKEN_EQUAL)) {
+        expression();
+        emit_set_global(constant, line);
+    } else {
+        emit_get_global(constant, line);
+    }
 }
 
 //

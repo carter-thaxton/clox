@@ -22,6 +22,10 @@ enum OpCode {
     OP_GET_GLOBAL_16,
     OP_GET_GLOBAL_24,
 
+    OP_SET_GLOBAL,
+    OP_SET_GLOBAL_16,
+    OP_SET_GLOBAL_24,
+
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
@@ -49,6 +53,7 @@ struct Chunk {
     void write_constant(int constant, int line);
     void write_define_global(int constant, int line);
     void write_get_global(int constant, int line);
+    void write_set_global(int constant, int line);
 
     int write_constant_value(Value value, int line);
     int add_constant_value(Value value);
