@@ -177,7 +177,7 @@ static ParseRule* get_rule(TokenType op_type) {
     return &rules[op_type];
 }
 
-static void parse_precedence(Precedence precedence) {
+static void expr_precedence(Precedence precedence) {
     parser.advance();
     ParseFn prefix_rule = get_rule(parser.previous.type)->prefix;
     if (!prefix_rule) return parser.error("Expect expression.");
@@ -197,7 +197,7 @@ static void parse_precedence(Precedence precedence) {
 }
 
 static void expression() {
-    parse_precedence(PREC_ASSIGNMENT);
+    expr_precedence(PREC_ASSIGNMENT);
 }
 
 static void number(bool _lvalue) {
@@ -235,7 +235,7 @@ static void unary(bool _lvalue) {
     int line = parser.line();
     TokenType op_type = parser.previous.type;
 
-    parse_precedence(PREC_UNARY);
+    expr_precedence(PREC_UNARY);
 
     switch (op_type) {
         case TOKEN_MINUS:   emit_byte(OP_NEGATE, line); break;
@@ -252,7 +252,7 @@ static void binary(bool _lvalue) {
     ParseRule* rule = get_rule(op_type);
 
     Precedence next_prec = (Precedence) (rule->precedence + 1);  // left-associative
-    parse_precedence(next_prec);
+    expr_precedence(next_prec);
 
     switch (op_type) {
         case TOKEN_PLUS:    emit_byte(OP_ADD, line); break;
