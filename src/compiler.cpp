@@ -296,6 +296,7 @@ static void statement() {
 
 static void var_decl() {
     int global = parse_variable("Expect variable name.");
+    if (global < 0) return;
     int line = parser.line();
 
     if (parser.match(TOKEN_EQUAL)) {
