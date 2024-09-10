@@ -152,6 +152,23 @@ static void emit_return(int line) {
     emit_byte(OP_RETURN, line);
 }
 
+// emit OP_POP and OP_POPN instructions
+static void emit_pop_count(int count, int line) {
+    assert(count >= 0);
+
+    while (count > 1) {
+        int n = count <= 255 ? count : 255;
+        emit_byte(OP_POPN, line);
+        emit_byte(n, line);
+        count -= n;
+    }
+
+    if (count > 0) {
+        assert(count == 1);
+        emit_byte(OP_POP, line);
+    }
+}
+
 static void end_compiler() {
     emit_return(parser.line());
 
@@ -203,7 +220,7 @@ static bool declare_local(Token* token) {
 static int define_local() {
     assert(local_count > 0);
     int index = local_count - 1;
-    Local* local = &locals[local_count];
+    Local* local = &locals[index];
     assert(local->depth < 0);
     local->depth = scope_depth;
     return index;
@@ -281,11 +298,7 @@ static void end_scope() {
         local_count--;
     }
 
-    // TODO: optimize with OP_POPN instruction
-    int line = parser.line();
-    for (int i = 0; i < locals_to_pop; i++) {
-        emit_byte(OP_POP, line);
-    }
+    emit_pop_count(locals_to_pop, parser.line());
 }
 
 

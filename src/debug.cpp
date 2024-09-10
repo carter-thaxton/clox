@@ -150,6 +150,8 @@ int print_instruction(Chunk* chunk, int offset) {
 
     case OP_POP:
         return print_simple_inst("OP_POP", offset);
+    case OP_POPN:
+        return print_index_inst("OP_POPN", chunk, offset);
     case OP_PRINT:
         return print_simple_inst("OP_PRINT", offset);
     case OP_RETURN:

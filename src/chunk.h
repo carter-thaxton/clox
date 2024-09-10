@@ -46,6 +46,7 @@ enum OpCode {
     OP_NOT,
 
     OP_POP,
+    OP_POPN,
     OP_PRINT,
     OP_RETURN,
 };

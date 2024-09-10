@@ -323,6 +323,11 @@ inline InterpretResult VM::run() {
             pop();
             break;
         }
+        case OP_POPN: {
+            int n = read_byte();
+            pop_n(n);
+            break;
+        }
         case OP_PRINT: {
             Value val = pop();
             print_value(val);
@@ -345,12 +350,15 @@ inline void VM::push(Value value) {
     this->stack_top++;
 }
 
+inline Value VM::peek(int depth) {
+    return this->stack_top[-1 - depth];
+}
+
 inline Value VM::pop() {
     this->stack_top--;
     return *this->stack_top;
 }
 
-inline Value VM::peek(int depth) {
-    return this->stack_top[-1 - depth];
+inline void VM::pop_n(int n) {
+    this->stack_top -= n;
 }
-

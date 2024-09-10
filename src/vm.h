@@ -46,8 +46,9 @@ private:
     Value read_constant_24();
 
     void push(Value value);
-    Value pop();
     Value peek(int depth);
+    Value pop();
+    void pop_n(int n);
 
     Chunk* chunk;
     uint8_t* ip;
