@@ -215,26 +215,24 @@ static bool declare_local(Token* token) {
     return true;
 }
 
-// defines the most recently declared variable, returning its index
 // assertion error if called without corresponding declare_local()
-static int define_local() {
+static void define_local(int index) {
     assert(local_count > 0);
-    int index = local_count - 1;
+    assert(index < local_count);
     Local* local = &locals[index];
     assert(local->depth < 0);
     local->depth = scope_depth;
-    return index;
 }
 
 // lookup a local variable by name
-// return a non-negative local index on success, and -1 if not found or error
+// return a non-negative local index on success, and -1 if not found
+// produces error when attempting to resolve a declared but undefined variable.  still returns local index
 static int resolve_local(Token* name) {
     for (int i = local_count - 1; i >= 0; i--) {
         Local* local = &locals[i];
         if (identifiers_equal(&local->name, name)) {
             if (local->depth < 0) {
                 parser.error("Can't read local variable in its own initializer.");
-                return -1;
             }
             return i;
         }
@@ -278,7 +276,7 @@ static int parse_variable(const char* err_msg) {
 
     if (scope_depth > 0) {
         // local - index is the most recently declared variable above
-        return define_local();
+        return local_count - 1;
     } else {
         // global - index is to a constant for variable name
         return make_identifier_constant(&parser.previous);
@@ -483,7 +481,7 @@ static void var_decl() {
     parser.consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
 
     if (scope_depth > 0) {
-        // nothing to do to for local variables
+        define_local(index);
     } else {
         emit_define_global(index, line);
     }
