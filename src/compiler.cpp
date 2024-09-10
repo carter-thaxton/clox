@@ -190,6 +190,10 @@ static void parse_precedence(Precedence precedence) {
         if (!infix_rule) return parser.error("missing infix function");
         infix_rule(lvalue);
     }
+
+    if (lvalue && parser.match(TOKEN_EQUAL)) {
+        parser.error("Invalid assignment target.");
+    }
 }
 
 static void expression() {
