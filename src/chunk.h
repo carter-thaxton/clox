@@ -49,6 +49,8 @@ enum OpCode {
     OP_POPN,
     OP_PRINT,
     OP_RETURN,
+    OP_JUMP,
+    OP_JUMP_IF_FALSE,
 };
 
 struct Chunk {

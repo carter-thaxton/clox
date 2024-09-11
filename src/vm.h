@@ -38,8 +38,9 @@ private:
     void free_objects();
 
     uint8_t read_byte();
-    int read_index_16();
-    int read_index_24();
+    int read_unsigned_16();
+    int read_unsigned_24();
+    int read_signed_16();
 
     Value read_constant();
     Value read_constant_16();

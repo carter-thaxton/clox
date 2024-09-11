@@ -59,6 +59,13 @@ static int print_index_24_inst(const char* name, Chunk* chunk, int offset) {
     return offset + 4;
 }
 
+static int print_signed_16_inst(const char* name, Chunk* chunk, int offset) {
+    int16_t index = chunk->code[offset + 1];
+    index |= chunk->code[offset + 2] << 8;
+    print_index(name, chunk, (int) index);
+    return offset + 3;
+}
+
 void print_chunk(Chunk* chunk, const char* name) {
     printf("== %s ==\n", name);
 
@@ -156,6 +163,10 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_simple_inst("OP_PRINT", offset);
     case OP_RETURN:
         return print_simple_inst("OP_RETURN", offset);
+    case OP_JUMP:
+        return print_signed_16_inst("OP_JUMP", chunk, offset);
+    case OP_JUMP_IF_FALSE:
+        return print_signed_16_inst("OP_JUMP_IF_FALSE", chunk, offset);
 
     default:
         printf("Unknown opcode %d\n", inst);

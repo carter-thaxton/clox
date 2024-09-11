@@ -148,6 +148,28 @@ static void emit_set_local(int index, int line) {
     current_chunk()->write_set_local(index, line);
 }
 
+static int emit_jump(uint8_t opcode, int line) {
+    emit_byte(opcode, line);
+    emit_bytes(0xFF, 0xFF, line);           // 2 bytes for placeholder
+    return current_chunk()->length - 2;     // index of placeholder within chunk, provide to patch_jump() later
+}
+
+static void patch_jump(int placeholder_index, int to_index) {
+    // calculate relative jump distance, from original placeholder to current instruction, taking into account size of 16-bit offset itself
+    int jump = to_index - placeholder_index - 2;
+
+    // result must be in range -32678 to 32767
+    if (jump > INT16_MAX) {
+        return parser.error("Too much code to jump over.");
+    } else if (jump < INT16_MIN) {
+        return parser.error("Loop body too large.");
+    }
+
+    uint8_t* code = current_chunk()->code;
+    code[placeholder_index] = jump & 0xFF;
+    code[placeholder_index+1] = (jump >> 8) & 0xFF;
+}
+
 static void emit_return(int line) {
     emit_byte(OP_RETURN, line);
 }
@@ -430,6 +452,7 @@ static void variable(bool lvalue) {
 //
 
 static void declaration();
+static void statement();
 
 static void expression_stmt() {
     int line = parser.line();
@@ -445,6 +468,17 @@ static void print_stmt() {
     emit_byte(OP_PRINT, line);
 }
 
+static void if_stmt() {
+    int line = parser.line();
+    parser.consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+    expression();
+    parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    int then_jump = emit_jump(OP_JUMP_IF_FALSE, line);
+    statement();
+    patch_jump(then_jump, current_chunk()->length);
+}
+
 static void block() {
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
         declaration();
@@ -455,6 +489,8 @@ static void block() {
 static void statement() {
     if (parser.match(TOKEN_PRINT)) {
         print_stmt();
+    } else if (parser.match(TOKEN_IF)) {
+        if_stmt();
     } else if (parser.match(TOKEN_LEFT_BRACE)) {
         begin_scope();
         block();

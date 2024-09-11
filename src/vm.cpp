@@ -61,16 +61,22 @@ inline uint8_t VM::read_byte() {
     return *this->ip++;
 };
 
-inline int VM::read_index_16() {
+inline int VM::read_unsigned_16() {
     int index = this->read_byte();
     index |= this->read_byte() << 8;
     return index;
 }
 
-inline int VM::read_index_24() {
+inline int VM::read_unsigned_24() {
     int index = this->read_byte();
     index |= this->read_byte() << 8;
     return index;
+}
+
+inline int VM::read_signed_16() {
+    int16_t index = this->read_byte();
+    index |= this->read_byte() << 8;
+    return (int) index;
 }
 
 inline Value VM::read_constant() {
@@ -79,12 +85,12 @@ inline Value VM::read_constant() {
 }
 
 inline Value VM::read_constant_16() {
-    int constant = this->read_index_16();
+    int constant = this->read_unsigned_16();
     return this->chunk->constants.values[constant];
 }
 
 inline Value VM::read_constant_24() {
-    int constant = this->read_index_24();
+    int constant = this->read_unsigned_24();
     return this->chunk->constants.values[constant];
 }
 
@@ -222,12 +228,12 @@ inline InterpretResult VM::run() {
             break;
         }
         case OP_GET_LOCAL_16: {
-            int index = read_index_16();
+            int index = read_unsigned_16();
             push(this->stack[index]);
             break;
         }
         case OP_GET_LOCAL_24: {
-            int index = read_index_24();
+            int index = read_unsigned_24();
             push(this->stack[index]);
             break;
         }
@@ -238,12 +244,12 @@ inline InterpretResult VM::run() {
             break;
         }
         case OP_SET_LOCAL_16: {
-            int index = read_index_16();
+            int index = read_unsigned_16();
             this->stack[index] = peek(0);
             break;
         }
         case OP_SET_LOCAL_24: {
-            int index = read_index_24();
+            int index = read_unsigned_24();
             this->stack[index] = peek(0);
             break;
         }
@@ -338,8 +344,21 @@ inline InterpretResult VM::run() {
             // exit
             return INTERPRET_OK;
         }
+        case OP_JUMP: {
+            int jump = read_signed_16();
+            this->ip += jump;
+            break;
+        }
+        case OP_JUMP_IF_FALSE: {
+            int jump = read_signed_16();
+            if (!is_truthy(peek(0))) {
+                this->ip += jump;
+            }
+            break;
+        }
 
         default:
+            return runtime_error("Undefined opcode: %d", inst);
             ; // nothing
         }
     }
