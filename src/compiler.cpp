@@ -480,6 +480,7 @@ static void or_(bool _lvalue) {
 
 static void declaration();
 static void statement();
+static void var_decl();
 
 static void expression_stmt() {
     int line = parser.line();
@@ -517,6 +518,96 @@ static void if_stmt() {
     patch_jump(else_jump, here());
 }
 
+static void while_stmt() {
+    int line = parser.line();
+    parser.consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+
+    // condition
+    int loop_start = here();
+    expression();
+    parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+    int jump_exit = emit_jump(OP_JUMP_IF_FALSE, line);
+
+    // loop body
+    emit_byte(OP_POP, line);
+    statement();
+
+    // loop back to start
+    int jump_loop = emit_jump(OP_JUMP, line);
+    patch_jump(jump_loop, loop_start);
+
+    // exit
+    patch_jump(jump_exit, here());
+    emit_byte(OP_POP, line);
+}
+
+static void for_stmt() {
+    int line = parser.line();
+    parser.consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+
+    begin_scope();
+
+    // initializer
+    if (parser.match(TOKEN_SEMICOLON)) {
+        // none
+    } else if (parser.match(TOKEN_VAR)) {
+        var_decl();
+    } else {
+        expression_stmt();
+    }
+
+    // condition
+    int jump_exit = -1;
+    int loop_start = here();
+    if (parser.match(TOKEN_SEMICOLON)) {
+        // none
+    } else {
+        expression();
+        parser.consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+        jump_exit = emit_jump(OP_JUMP_IF_FALSE, line);
+        emit_byte(OP_POP, line);
+    }
+
+    // increment
+    if (parser.match(TOKEN_RIGHT_PAREN)) {
+        // none
+        // after body, loop to start
+    } else {
+        // jump to body first
+        int jump_body = emit_jump(OP_JUMP, line);
+
+        // then back to increment
+        int inc_start = here();
+        expression();
+        emit_byte(OP_POP, line);
+
+        parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+        int jump_loop = emit_jump(OP_JUMP, line);
+        patch_jump(jump_loop, loop_start);
+
+        // after body, loop to increment
+        loop_start = inc_start;
+
+        // and before increment, jump to body
+        patch_jump(jump_body, here());
+    }
+
+    // loop body
+    statement();
+
+    // loop back to start or increment
+    int jump_loop = emit_jump(OP_JUMP, line);
+    patch_jump(jump_loop, loop_start);
+
+    // exit
+    if (jump_exit >= 0) {
+        patch_jump(jump_exit, here());
+        emit_byte(OP_POP, line);
+    }
+
+    end_scope();
+}
+
 static void block() {
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
         declaration();
@@ -529,6 +620,10 @@ static void statement() {
         print_stmt();
     } else if (parser.match(TOKEN_IF)) {
         if_stmt();
+    } else if (parser.match(TOKEN_WHILE)) {
+        while_stmt();
+    } else if (parser.match(TOKEN_FOR)) {
+        for_stmt();
     } else if (parser.match(TOKEN_LEFT_BRACE)) {
         begin_scope();
         block();
