@@ -125,12 +125,12 @@ inline InterpretResult VM::run() {
             push(NIL_VAL);
             break;
         }
-        case OP_TRUE: {
-            push(BOOL_VAL(true));
-            break;
-        }
         case OP_FALSE: {
             push(BOOL_VAL(false));
+            break;
+        }
+        case OP_TRUE: {
+            push(BOOL_VAL(true));
             break;
         }
 
@@ -352,6 +352,13 @@ inline InterpretResult VM::run() {
         case OP_JUMP_IF_FALSE: {
             int jump = read_signed_16();
             if (!is_truthy(peek(0))) {
+                this->ip += jump;
+            }
+            break;
+        }
+        case OP_JUMP_IF_TRUE: {
+            int jump = read_signed_16();
+            if (is_truthy(peek(0))) {
                 this->ip += jump;
             }
             break;

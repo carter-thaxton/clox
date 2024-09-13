@@ -88,10 +88,10 @@ int print_instruction(Chunk* chunk, int offset) {
     switch (inst) {
     case OP_NIL:
         return print_simple_inst("OP_NIL", offset);
-    case OP_TRUE:
-        return print_simple_inst("OP_TRUE", offset);
     case OP_FALSE:
         return print_simple_inst("OP_FALSE", offset);
+    case OP_TRUE:
+        return print_simple_inst("OP_TRUE", offset);
 
     case OP_CONSTANT:
         return print_constant_inst("OP_CONSTANT", chunk, offset);
@@ -167,6 +167,8 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_signed_16_inst("OP_JUMP", chunk, offset);
     case OP_JUMP_IF_FALSE:
         return print_signed_16_inst("OP_JUMP_IF_FALSE", chunk, offset);
+    case OP_JUMP_IF_TRUE:
+        return print_signed_16_inst("OP_JUMP_IF_TRUE", chunk, offset);
 
     default:
         printf("Unknown opcode %d\n", inst);

@@ -7,8 +7,8 @@
 
 enum OpCode {
     OP_NIL,
-    OP_TRUE,
     OP_FALSE,
+    OP_TRUE,
 
     OP_CONSTANT,
     OP_CONSTANT_16,
@@ -51,6 +51,7 @@ enum OpCode {
     OP_RETURN,
     OP_JUMP,
     OP_JUMP_IF_FALSE,
+    OP_JUMP_IF_TRUE,
 };
 
 struct Chunk {

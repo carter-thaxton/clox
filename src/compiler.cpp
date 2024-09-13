@@ -47,6 +47,9 @@ static void number(bool lvalue);
 static void literal(bool lvalue);
 static void string(bool lvalue);
 static void variable(bool lvalue);
+static void and_(bool lvalue);
+static void or_(bool lvalue);
+
 
 static ParseRule rules[] = {
     [TOKEN_EOF]             = {NULL,     NULL,   PREC_NONE},
@@ -77,7 +80,7 @@ static ParseRule rules[] = {
     [TOKEN_STRING]          = {string,   NULL,   PREC_NONE},
     [TOKEN_NUMBER]          = {number,   NULL,   PREC_NONE},
 
-    [TOKEN_AND]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_AND]             = {NULL,     and_,   PREC_AND},
     [TOKEN_CLASS]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ELSE]            = {NULL,     NULL,   PREC_NONE},
     [TOKEN_FALSE]           = {literal,  NULL,   PREC_NONE},
@@ -85,7 +88,7 @@ static ParseRule rules[] = {
     [TOKEN_FUN]             = {NULL,     NULL,   PREC_NONE},
     [TOKEN_IF]              = {NULL,     NULL,   PREC_NONE},
     [TOKEN_NIL]             = {literal,  NULL,   PREC_NONE},
-    [TOKEN_OR]              = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_OR]              = {NULL,     or_,    PREC_OR},
     [TOKEN_PRINT]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RETURN]          = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SUPER]           = {NULL,     NULL,   PREC_NONE},
@@ -369,8 +372,8 @@ static void literal(bool _lvalue) {
 
     switch (op_type) {
         case TOKEN_NIL:     emit_byte(OP_NIL, line); break;
-        case TOKEN_TRUE:    emit_byte(OP_TRUE, line); break;
         case TOKEN_FALSE:   emit_byte(OP_FALSE, line); break;
+        case TOKEN_TRUE:    emit_byte(OP_TRUE, line); break;
 
         default: return parser.error("unreachable literal");
     }
@@ -449,6 +452,26 @@ static void variable(bool lvalue) {
             emit_get_global(constant, line);
         }
     }
+}
+
+static void and_(bool _lvalue) {
+    int line = parser.line();
+    int jump = emit_jump(OP_JUMP_IF_FALSE, line);
+
+    emit_byte(OP_POP, line);
+    expr_precedence(PREC_AND);
+
+    patch_jump(jump, here());
+}
+
+static void or_(bool _lvalue) {
+    int line = parser.line();
+    int jump = emit_jump(OP_JUMP_IF_TRUE, line);
+
+    emit_byte(OP_POP, line);
+    expr_precedence(PREC_OR);
+
+    patch_jump(jump, here());
 }
 
 //
