@@ -110,6 +110,10 @@ static Chunk* current_chunk() {
     return compiling_chunk;
 }
 
+static int here() {
+    return current_chunk()->length;
+}
+
 static void emit_byte(uint8_t byte, int line) {
     current_chunk()->write(byte, line);
 }
@@ -469,14 +473,25 @@ static void print_stmt() {
 }
 
 static void if_stmt() {
-    int line = parser.line();
+    int if_line = parser.line();
     parser.consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
     expression();
     parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
-    int then_jump = emit_jump(OP_JUMP_IF_FALSE, line);
+    int then_jump = emit_jump(OP_JUMP_IF_FALSE, if_line);
+    emit_byte(OP_POP, if_line);
     statement();
-    patch_jump(then_jump, current_chunk()->length);
+
+    int else_line = parser.line_at_current();
+    int else_jump = emit_jump(OP_JUMP, else_line);
+    patch_jump(then_jump, here());
+    emit_byte(OP_POP, else_line);
+
+    if (parser.match(TOKEN_ELSE)) {
+        statement();
+    }
+
+    patch_jump(else_jump, here());
 }
 
 static void block() {
