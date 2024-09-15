@@ -686,7 +686,9 @@ static void block(LoopContext* loop_ctx) {
 }
 
 static void statement(LoopContext* loop_ctx) {
-    if (parser.match(TOKEN_PRINT)) {
+    if (parser.match(TOKEN_SEMICOLON)) {
+        // empty statement
+    } else if (parser.match(TOKEN_PRINT)) {
         print_stmt();
     } else if (parser.match(TOKEN_IF)) {
         if_stmt(loop_ctx);
