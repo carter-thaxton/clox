@@ -96,7 +96,7 @@ fail = 0
 
 if exit_code not in [SUCCESS_EXIT_CODE, PARSER_EXIT_CODE, RUNTIME_EXIT_CODE]:
   print(FAIL + ": Unexpected exit code: " + str(exit_code))
-  fail = 1
+  fail = 2
 else:
 
   if expect_parser_errors:
