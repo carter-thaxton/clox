@@ -32,7 +32,7 @@ makedir:
 	@mkdir -p $(BIN_PATH) $(OBJ_PATH)
 
 .PHONY: all
-all: $(TARGET)
+all: $(TARGET) test/test.pyc
 
 .PHONY: clean
 clean:
