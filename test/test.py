@@ -33,7 +33,7 @@ def parse_expectations(file):
         expect_output.append(m.group(1))
 
       # parse error with line number
-      m = re.search(r'^// (\[line (\d+)\] Error (.+))', line)
+      m = re.search(r'^// (\[line (\d+)\] Error(.+))', line)
       if m:
         expect_parser_errors.append(m.group(1))
 
