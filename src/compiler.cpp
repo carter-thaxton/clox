@@ -546,7 +546,7 @@ static void while_stmt() {
     loop_ctx.scope_depth = scope_depth;
     loop_ctx.num_break_stmts = 0;
 
-    // condition
+    // loop condition
     expression();
     parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
     int jump_exit = emit_jump(OP_JUMP_IF_FALSE, line);
@@ -561,8 +561,12 @@ static void while_stmt() {
 
     // exit
     patch_jump(jump_exit, here());
-    // TODO: patch any 'break' statements
-    emit_byte(OP_POP, line);
+    emit_byte(OP_POP, line); // pop loop condition
+
+    // patch any 'break' statements
+    for (int i=0; i < loop_ctx.num_break_stmts; i++) {
+        patch_jump(loop_ctx.break_stmts[i], here());
+    }
 }
 
 static void for_stmt() {
@@ -588,7 +592,7 @@ static void for_stmt() {
 
     int jump_exit = -1;
 
-    // condition
+    // loop condition
     if (parser.match(TOKEN_SEMICOLON)) {
         // none
     } else {
@@ -632,25 +636,37 @@ static void for_stmt() {
     // exit
     if (jump_exit >= 0) {
         patch_jump(jump_exit, here());
-        // TODO: patch any 'break' statements
-        emit_byte(OP_POP, line);
+        emit_byte(OP_POP, line); // pop loop condition
+    }
+
+    // patch any 'break' statements
+    for (int i=0; i < loop_ctx.num_break_stmts; i++) {
+        patch_jump(loop_ctx.break_stmts[i], here());
     }
 
     end_scope();
 }
 
 static void break_stmt(LoopContext* loop_ctx) {
-    if (loop_ctx == NULL) return parser.error("Can only break within loop.");
+    if (loop_ctx == NULL)
+        return parser.error("Can only break within loop.");
 
-    // int line = parser.line();
-    // pop_scope_to(loop_ctx->scope_depth, line);
-    parser.error("TODO: implement break stmt");
+    if (loop_ctx->num_break_stmts >= MAX_BREAK_STMTS)
+        return parser.error("Too many break statements in one loop.");
+
+    int line = parser.line();
+    pop_scope_to(loop_ctx->scope_depth, line);
+
+    // jump to loop end, keeping track of jump to patch later
+    int jump_exit = emit_jump(OP_JUMP, line);
+    loop_ctx->break_stmts[loop_ctx->num_break_stmts++] = jump_exit;
 
     parser.consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
 }
 
 static void continue_stmt(LoopContext* loop_ctx) {
-    if (loop_ctx == NULL) return parser.error("Can only continue within loop.");
+    if (loop_ctx == NULL)
+        return parser.error("Can only continue within loop.");
 
     int line = parser.line();
     pop_scope_to(loop_ctx->scope_depth, line);
