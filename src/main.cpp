@@ -18,11 +18,11 @@
 #define EX_IOERR    (74)    // I/O error
 
 
-InterpretResult interpret(VM* vm, Chunk* chunk, const char* src) {
-    bool ok = compile(src, chunk, vm);
-    if (!ok) return INTERPRET_COMPILE_ERROR;
+InterpretResult interpret(VM* vm, const char* src) {
+    ObjFunction* fn = compile(src, vm);
+    if (!fn) return INTERPRET_COMPILE_ERROR;
 
-    return vm->interpret(chunk);
+    return vm->interpret(&fn->chunk);
 }
 
 void debug(VM* vm) {
@@ -51,7 +51,7 @@ void debug(VM* vm) {
 
 void repl() {
     VM vm;
-    Chunk chunk;
+    ObjFunction* fn;
 
     while (true) {
         char *line = readline("> ");
@@ -64,8 +64,7 @@ void repl() {
             if (strcmp(line, "debug") == 0) {
                 debug(&vm);
             } else {
-                chunk.reset();
-                interpret(&vm, &chunk, line);
+                interpret(&vm, line);
             }
         }
 
@@ -103,10 +102,9 @@ char* read_file(const char* path) {
 
 void run_file(const char* path) {
     VM vm;
-    Chunk chunk;
 
     char *file = read_file(path);
-    int result = interpret(&vm, &chunk, file);
+    int result = interpret(&vm, file);
     free(file);
 
     if (result == INTERPRET_COMPILE_ERROR) exit(EX_DATAERR);

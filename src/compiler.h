@@ -2,7 +2,7 @@
 
 #include "common.h"
 
-struct Chunk;
 struct VM;
+struct ObjFunction;
 
-bool compile(const char* src, Chunk* chunk, VM* vm);
+ObjFunction* compile(const char* src, VM* vm);

@@ -4,14 +4,19 @@
 #include "debug.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
 
 VM::VM() {
     this->objects = NULL;
+    this->chunk = NULL;
+    this->ip = NULL;
     reset_stack();
 }
 
 VM::~VM() {
     free_objects();
+    this->chunk = NULL;
+    this->ip = NULL;
 }
 
 void VM::reset_stack() {
@@ -39,6 +44,7 @@ void VM::free_objects() {
         object_count--;
     }
     this->objects = NULL;
+    assert(object_count == 0);
 }
 
 InterpretResult VM::runtime_error(const char* format, ...) {

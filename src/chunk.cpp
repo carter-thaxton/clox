@@ -11,15 +11,6 @@ Chunk::Chunk() {
 }
 
 Chunk::~Chunk() {
-    FREE_ARRAY(uint8_t, this->code, this->capacity);
-
-    this->code = NULL;
-    this->lines = NULL;
-    this->capacity = 0;
-    this->length = 0;
-}
-
-void Chunk::reset() {
     if (this->code)
         FREE_ARRAY(uint8_t, this->code, this->capacity);
 

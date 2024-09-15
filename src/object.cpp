@@ -2,6 +2,7 @@
 #include "memory.h"
 #include "vm.h"
 #include <string.h>
+#include <new>
 
 Obj* alloc_object(size_t size, ObjType type) {
     Obj* object = (Obj*) reallocate(NULL, 0, size);
@@ -16,6 +17,12 @@ void free_object(Obj* object) {
             ObjString* string = (ObjString*) object;
             size_t size = sizeof(ObjString) + string->length + 1;
             reallocate(string, size, 0);
+            break;
+        }
+        case OBJ_FUNCTION: {
+            ObjFunction* fcn = (ObjFunction*) object;
+            fcn->chunk.~Chunk();
+            FREE(ObjFunction, fcn);
             break;
         }
     }
@@ -83,4 +90,10 @@ Value concatenate_strings(VM* vm, Value a, Value b) {
     vm->register_object((Obj*) result);
 
     return OBJ_VAL(result);
+}
+
+ObjFunction* new_function(VM* vm) {
+    ObjFunction* result = new (alloc_object(sizeof(ObjFunction), OBJ_FUNCTION)) ObjFunction();
+    vm->register_object((Obj*) result);
+    return result;
 }

@@ -58,8 +58,6 @@ struct Chunk {
     Chunk();
     ~Chunk();
 
-    void reset();
-
     void write(uint8_t byte, int line);
 
     void write_constant(int constant, int line);

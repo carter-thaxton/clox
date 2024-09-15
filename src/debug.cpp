@@ -214,6 +214,15 @@ void print_object(Obj* object) {
             printf("%s", ((ObjString*) object)->chars);
             return;
         }
+        case OBJ_FUNCTION: {
+            ObjString* name = ((ObjFunction*) object)->name;
+            if (name) {
+                printf("<fn %s>", name->chars);
+            } else {
+                printf("<script>");
+            }
+            return;
+        }
     }
 }
 

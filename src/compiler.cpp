@@ -111,8 +111,8 @@ static ParseRule rules[] = {
 // global variables, to avoid passing through all functions below
 // initialized and then cleared all within compile(), so it shouldn't leak
 static Parser parser;
-static Chunk *compiling_chunk;
 static VM *compiling_vm;
+static ObjFunction *compiling_fn;
 
 static Local locals[MAX_INDEX+1];  // TODO: put into a struct, maybe a growable array?
 static int local_count;
@@ -120,7 +120,7 @@ static int scope_depth;
 
 
 static Chunk* current_chunk() {
-    return compiling_chunk;
+    return &compiling_fn->chunk;
 }
 
 static int here() {
@@ -213,7 +213,8 @@ static void end_compiler() {
 
     #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error()) {
-        print_chunk(current_chunk(), "code");
+        const char* name = compiling_fn ? compiling_fn->name : "<script>";
+        print_chunk(current_chunk(), name);
     }
     #endif
 }
@@ -747,11 +748,11 @@ static void declaration(LoopContext* loop_ctx) {
 // Top-Level Interface
 //
 
-bool compile(const char* src, Chunk* chunk, VM* vm) {
+ObjFunction* compile(const char* src, VM* vm) {
     // use static globals, so not re-entrant
     parser.init(src);
-    compiling_chunk = chunk;
     compiling_vm = vm;
+    compiling_fn = new_function(vm);
 
     local_count = 0;
     scope_depth = 0;
@@ -762,12 +763,12 @@ bool compile(const char* src, Chunk* chunk, VM* vm) {
 
     end_compiler();
 
-    bool ok = !parser.had_error();
+    ObjFunction* result = parser.had_error() ? NULL : compiling_fn;
 
     // clear the static globals
-    parser.init("");
-    compiling_chunk = NULL;
+    compiling_fn = NULL;
     compiling_vm = NULL;
+    parser.init("");
 
-    return ok;
+    return result;
 }

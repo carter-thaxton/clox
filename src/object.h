@@ -8,6 +8,7 @@ struct VM;
 
 enum ObjType {
     OBJ_STRING,
+    OBJ_FUNCTION,
 };
 
 struct Obj {
@@ -22,11 +23,21 @@ struct ObjString {
     char chars[];
 };
 
+struct ObjFunction {
+    Obj obj;
+    ObjString* name;
+    int arity;
+    Chunk chunk;
+};
+
 #define OBJ_TYPE(value)     (AS_OBJ(value)->type)
 
 #define IS_STRING(value)    (is_obj_type(value, OBJ_STRING))
 #define AS_STRING(value)    ((ObjString*) AS_OBJ(value))
 #define AS_CSTRING(value)   (AS_STRING(value)->chars)
+
+#define IS_FUNCTION(value)  (is_obj_type(value, OBJ_FUNCTION))
+#define AS_FUNCTION(value)  ((ObjFunction*) AS_OBJ(value))
 
 #define STRING_MAX_LEN      0x7FFFFF00
 
@@ -41,3 +52,5 @@ void free_object(Obj* object);
 
 Value string_value(VM* vm, const char* str, int length);
 Value concatenate_strings(VM* vm, Value a, Value b);
+
+ObjFunction* new_function(VM* vm);
