@@ -11,6 +11,7 @@
 #include "debug.h"
 #endif
 
+#define MAX_BREAK_STMTS     64
 
 enum Precedence {
     PREC_NONE,
@@ -37,6 +38,13 @@ struct ParseRule {
 struct Local {
     Token name;
     int depth;
+};
+
+struct LoopContext {
+    int scope_depth;
+    int loop_start;
+    int num_break_stmts;
+    int break_stmts[MAX_BREAK_STMTS];
 };
 
 // forward declarations
@@ -81,7 +89,9 @@ static ParseRule rules[] = {
     [TOKEN_NUMBER]          = {number,   NULL,   PREC_NONE},
 
     [TOKEN_AND]             = {NULL,     and_,   PREC_AND},
+    [TOKEN_BREAK]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_CLASS]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_CONTINUE]        = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ELSE]            = {NULL,     NULL,   PREC_NONE},
     [TOKEN_FALSE]           = {literal,  NULL,   PREC_NONE},
     [TOKEN_FOR]             = {NULL,     NULL,   PREC_NONE},
@@ -316,16 +326,24 @@ static void begin_scope() {
     scope_depth++;
 }
 
-static void end_scope() {
-    scope_depth--;
-
+// emit OP_POP and OP_POPN instructions to pop locals to given scope depth
+// used to break out of loop, without actually updating scope_depth or local_count
+static int pop_scope_to(int scope_depth, int line) {
     int locals_to_pop = 0;
-    while (local_count > 0 && locals[local_count-1].depth > scope_depth) {
+    int l = local_count;
+    while (l > 0 && locals[l-1].depth > scope_depth) {
         locals_to_pop++;
-        local_count--;
+        l--;
     }
 
-    emit_pop_count(locals_to_pop, parser.line());
+    emit_pop_count(locals_to_pop, line);
+    return locals_to_pop;
+}
+
+static void end_scope() {
+    assert(scope_depth > 0);
+    scope_depth--;
+    local_count -= pop_scope_to(scope_depth, parser.line());
 }
 
 
@@ -478,8 +496,8 @@ static void or_(bool _lvalue) {
 // Statements
 //
 
-static void declaration();
-static void statement();
+static void declaration(LoopContext* loop_ctx);
+static void statement(LoopContext* loop_ctx);
 static void var_decl();
 
 static void expression_stmt() {
@@ -496,7 +514,7 @@ static void print_stmt() {
     emit_byte(OP_PRINT, line);
 }
 
-static void if_stmt() {
+static void if_stmt(LoopContext* loop_ctx) {
     int if_line = parser.line();
     parser.consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
     expression();
@@ -504,7 +522,7 @@ static void if_stmt() {
 
     int then_jump = emit_jump(OP_JUMP_IF_FALSE, if_line);
     emit_byte(OP_POP, if_line);
-    statement();
+    statement(loop_ctx);
 
     int else_line = parser.line_at_current();
     int else_jump = emit_jump(OP_JUMP, else_line);
@@ -512,7 +530,7 @@ static void if_stmt() {
     emit_byte(OP_POP, else_line);
 
     if (parser.match(TOKEN_ELSE)) {
-        statement();
+        statement(loop_ctx);
     }
 
     patch_jump(else_jump, here());
@@ -522,22 +540,28 @@ static void while_stmt() {
     int line = parser.line();
     parser.consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
 
+    // new loop context
+    LoopContext loop_ctx;
+    loop_ctx.loop_start = here();
+    loop_ctx.scope_depth = scope_depth;
+    loop_ctx.num_break_stmts = 0;
+
     // condition
-    int loop_start = here();
     expression();
     parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
     int jump_exit = emit_jump(OP_JUMP_IF_FALSE, line);
 
     // loop body
     emit_byte(OP_POP, line);
-    statement();
+    statement(&loop_ctx);
 
     // loop back to start
     int jump_loop = emit_jump(OP_JUMP, line);
-    patch_jump(jump_loop, loop_start);
+    patch_jump(jump_loop, loop_ctx.loop_start);
 
     // exit
     patch_jump(jump_exit, here());
+    // TODO: patch any 'break' statements
     emit_byte(OP_POP, line);
 }
 
@@ -556,9 +580,15 @@ static void for_stmt() {
         expression_stmt();
     }
 
-    // condition
+    // new loop context
+    LoopContext loop_ctx;
+    loop_ctx.loop_start = here();
+    loop_ctx.scope_depth = scope_depth;
+    loop_ctx.num_break_stmts = 0;
+
     int jump_exit = -1;
-    int loop_start = here();
+
+    // condition
     if (parser.match(TOKEN_SEMICOLON)) {
         // none
     } else {
@@ -583,50 +613,78 @@ static void for_stmt() {
 
         parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
         int jump_loop = emit_jump(OP_JUMP, line);
-        patch_jump(jump_loop, loop_start);
+        patch_jump(jump_loop, loop_ctx.loop_start);
 
         // after body, loop to increment
-        loop_start = inc_start;
+        loop_ctx.loop_start = inc_start;
 
         // and before increment, jump to body
         patch_jump(jump_body, here());
     }
 
     // loop body
-    statement();
+    statement(&loop_ctx);
 
     // loop back to start or increment
     int jump_loop = emit_jump(OP_JUMP, line);
-    patch_jump(jump_loop, loop_start);
+    patch_jump(jump_loop, loop_ctx.loop_start);
 
     // exit
     if (jump_exit >= 0) {
         patch_jump(jump_exit, here());
+        // TODO: patch any 'break' statements
         emit_byte(OP_POP, line);
     }
 
     end_scope();
 }
 
-static void block() {
+static void break_stmt(LoopContext* loop_ctx) {
+    if (loop_ctx == NULL) return parser.error("Can only break within loop.");
+
+    // int line = parser.line();
+    // pop_scope_to(loop_ctx->scope_depth, line);
+    parser.error("TODO: implement break stmt");
+
+    parser.consume(TOKEN_SEMICOLON, "Expect ';' after 'break'.");
+}
+
+static void continue_stmt(LoopContext* loop_ctx) {
+    if (loop_ctx == NULL) return parser.error("Can only continue within loop.");
+
+    int line = parser.line();
+    pop_scope_to(loop_ctx->scope_depth, line);
+
+    // loop back to start
+    int jump_loop = emit_jump(OP_JUMP, line);
+    patch_jump(jump_loop, loop_ctx->loop_start);
+
+    parser.consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
+}
+
+static void block(LoopContext* loop_ctx) {
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
-        declaration();
+        declaration(loop_ctx);
     }
     parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
-static void statement() {
+static void statement(LoopContext* loop_ctx) {
     if (parser.match(TOKEN_PRINT)) {
         print_stmt();
     } else if (parser.match(TOKEN_IF)) {
-        if_stmt();
+        if_stmt(loop_ctx);
     } else if (parser.match(TOKEN_WHILE)) {
         while_stmt();
     } else if (parser.match(TOKEN_FOR)) {
         for_stmt();
+    } else if (parser.match(TOKEN_BREAK)) {
+        break_stmt(loop_ctx);
+    } else if (parser.match(TOKEN_CONTINUE)) {
+        continue_stmt(loop_ctx);
     } else if (parser.match(TOKEN_LEFT_BRACE)) {
         begin_scope();
-        block();
+        block(loop_ctx);
         end_scope();
     } else {
         expression_stmt();
@@ -656,11 +714,11 @@ static void var_decl() {
     }
 }
 
-static void declaration() {
+static void declaration(LoopContext* loop_ctx) {
     if (parser.match(TOKEN_VAR)) {
         var_decl();
     } else {
-        statement();
+        statement(loop_ctx);
     }
 
     parser.synchronize();
@@ -681,7 +739,7 @@ bool compile(const char* src, Chunk* chunk, VM* vm) {
     scope_depth = 0;
 
     while (!parser.match(TOKEN_EOF)) {
-        declaration();
+        declaration(NULL);
     }
 
     end_compiler();
