@@ -25,6 +25,9 @@ InterpretResult VM::interpret(ObjFunction* main_fn) {
     frame->fn = main_fn;
     frame->ip = main_fn->chunk.code;
     frame->values = this->stack_top;
+
+    push(OBJ_VAL(main_fn));
+
     return run();
 }
 

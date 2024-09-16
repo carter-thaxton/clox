@@ -759,6 +759,14 @@ ObjFunction* compile(const char* src, VM* vm) {
     local_count = 0;
     scope_depth = 0;
 
+    // define an initial local variable for the main function itself
+    Local* local = &locals[local_count++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.length = 0;
+    local->name.line = 0;
+    local->name.type = TOKEN_FUN;
+
     while (!parser.match(TOKEN_EOF)) {
         declaration(NULL);
     }
