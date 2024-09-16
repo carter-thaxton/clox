@@ -25,7 +25,7 @@ InterpretResult interpret(VM* vm, const char* src) {
     return vm->interpret(fn);
 }
 
-void debug(VM* vm) {
+void debug(VM* vm, ObjFunction* fn) {
     printf("VM objects: %d\tstrings: %d / %d\n",
         vm->get_object_count(),
         vm->get_string_count(),
@@ -39,19 +39,20 @@ void debug(VM* vm) {
     print_table(vm->get_strings());
     printf("\n");
 
-    // Chunk* chunk = vm->get_chunk();
-    // if (chunk) {
-    //     printf("constants:\n");
-    //     print_value_array(&chunk->constants);
-    //     printf("\n");
+    if (fn) {
+        Chunk* chunk = &fn->chunk;
+        printf("constants:\n");
+        print_value_array(&chunk->constants);
+        printf("\n");
 
-    //     print_chunk(chunk, "code");
-    // }
+        const char* name = fn->name ? fn->name->chars : "<script>";
+        print_chunk(chunk, name);
+    }
 }
 
 void repl() {
     VM vm;
-    ObjFunction* fn;
+    ObjFunction* fn = NULL;
 
     while (true) {
         char *line = readline("> ");
@@ -62,9 +63,12 @@ void repl() {
 
             // handle some commands at repl
             if (strcmp(line, "debug") == 0) {
-                debug(&vm);
+                debug(&vm, fn);
             } else {
-                interpret(&vm, line);
+                fn = compile(line, &vm);
+                if (fn) {
+                    vm.interpret(fn);
+                }
             }
         }
 

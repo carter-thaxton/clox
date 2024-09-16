@@ -21,6 +21,8 @@ void VM::reset_stack() {
 }
 
 InterpretResult VM::interpret(ObjFunction* main_fn) {
+    assert(main_fn->obj.type == OBJ_FUNCTION);
+
     CallFrame* frame = &frames[frame_count++];
     frame->fn = main_fn;
     frame->ip = main_fn->chunk.code;

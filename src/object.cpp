@@ -3,6 +3,7 @@
 #include "vm.h"
 #include <string.h>
 #include <new>
+#include <assert.h>
 
 Obj* alloc_object(size_t size, ObjType type) {
     Obj* object = (Obj*) reallocate(NULL, 0, size);
@@ -93,7 +94,13 @@ Value concatenate_strings(VM* vm, Value a, Value b) {
 }
 
 ObjFunction* new_function(VM* vm) {
-    ObjFunction* result = new (alloc_object(sizeof(ObjFunction), OBJ_FUNCTION)) ObjFunction();
+    ObjFunction* result = (ObjFunction*) alloc_object(sizeof(ObjFunction), OBJ_FUNCTION);
+
+    result->name = NULL;
+    result->arity = 0;
+    new (&result->chunk) Chunk();
+
     vm->register_object((Obj*) result);
+
     return result;
 }
