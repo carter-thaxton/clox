@@ -168,12 +168,12 @@ static void emit_set_local(int index, int line) {
 static int emit_jump(uint8_t opcode, int line) {
     emit_byte(opcode, line);
     emit_bytes(0xFF, 0xFF, line);           // 2 bytes for placeholder
-    return current_chunk()->length - 2;     // index of placeholder within chunk, provide to patch_jump() later
+    return here();                          // index of byte just after placeholder, provide to patch_jump() later
 }
 
 static void patch_jump(int placeholder_index, int to_index) {
-    // calculate relative jump distance, from original placeholder to current instruction, taking into account size of 16-bit offset itself
-    int jump = to_index - placeholder_index - 2;
+    // calculate relative jump distance, from original placeholder to current instruction
+    int jump = to_index - placeholder_index;
 
     // result must be in range -32678 to 32767
     if (jump > INT16_MAX) {
@@ -183,8 +183,10 @@ static void patch_jump(int placeholder_index, int to_index) {
     }
 
     uint8_t* code = current_chunk()->code;
-    code[placeholder_index] = jump & 0xFF;
-    code[placeholder_index+1] = (jump >> 8) & 0xFF;
+
+    // placeholder_index points to just after a big-endian 16-bit value
+    code[placeholder_index-2] = jump & 0xFF;
+    code[placeholder_index-1] = (jump >> 8) & 0xFF;
 }
 
 static void emit_return(int line) {
