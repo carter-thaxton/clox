@@ -215,7 +215,7 @@ static void end_compiler() {
 
     #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error()) {
-        const char* name = compiling_fn ? compiling_fn->name : "<script>";
+        const char* name = compiling_fn->name ? compiling_fn->name->chars : "<script>";
         print_chunk(current_chunk(), name);
     }
     #endif

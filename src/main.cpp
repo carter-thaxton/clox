@@ -22,7 +22,7 @@ InterpretResult interpret(VM* vm, const char* src) {
     ObjFunction* fn = compile(src, vm);
     if (!fn) return INTERPRET_COMPILE_ERROR;
 
-    return vm->interpret(&fn->chunk);
+    return vm->interpret(fn);
 }
 
 void debug(VM* vm) {
@@ -39,14 +39,14 @@ void debug(VM* vm) {
     print_table(vm->get_strings());
     printf("\n");
 
-    Chunk* chunk = vm->get_chunk();
-    if (chunk) {
-        printf("constants:\n");
-        print_value_array(&chunk->constants);
-        printf("\n");
+    // Chunk* chunk = vm->get_chunk();
+    // if (chunk) {
+    //     printf("constants:\n");
+    //     print_value_array(&chunk->constants);
+    //     printf("\n");
 
-        print_chunk(chunk, "code");
-    }
+    //     print_chunk(chunk, "code");
+    // }
 }
 
 void repl() {

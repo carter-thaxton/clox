@@ -8,24 +8,23 @@
 
 VM::VM() {
     this->objects = NULL;
-    this->chunk = NULL;
-    this->ip = NULL;
     reset_stack();
 }
 
 VM::~VM() {
     free_objects();
-    this->chunk = NULL;
-    this->ip = NULL;
 }
 
 void VM::reset_stack() {
     this->stack_top = this->stack;
+    this->frame_count = 0;
 }
 
-InterpretResult VM::interpret(Chunk* chunk) {
-    this->chunk = chunk;
-    this->ip = chunk->code;
+InterpretResult VM::interpret(ObjFunction* main_fn) {
+    CallFrame* frame = &frames[frame_count++];
+    frame->fn = main_fn;
+    frame->ip = main_fn->chunk.code;
+    frame->values = this->stack_top;
     return run();
 }
 
@@ -55,16 +54,25 @@ InterpretResult VM::runtime_error(const char* format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    size_t inst_offset = this->ip - this->chunk->code - 1;
-    int line = this->chunk->lines[inst_offset];
+    size_t inst_offset = frame()->ip - chunk()->code - 1;
+    int line = chunk()->lines[inst_offset];
     fprintf(stderr, "[line %d] in script\n", line);
 
     reset_stack();
     return INTERPRET_RUNTIME_ERROR;
 }
 
+inline CallFrame* VM::frame() {
+    assert(frame_count > 0);
+    return &frames[frame_count-1];
+}
+
+inline Chunk* VM::chunk() {
+    return &frame()->fn->chunk;
+}
+
 inline uint8_t VM::read_byte() {
-    return *this->ip++;
+    return *frame()->ip++;
 };
 
 inline int VM::read_unsigned_16() {
@@ -87,17 +95,17 @@ inline int VM::read_signed_16() {
 
 inline Value VM::read_constant() {
     int constant = this->read_byte();
-    return this->chunk->constants.values[constant];
+    return chunk()->constants.values[constant];
 }
 
 inline Value VM::read_constant_16() {
     int constant = this->read_unsigned_16();
-    return this->chunk->constants.values[constant];
+    return chunk()->constants.values[constant];
 }
 
 inline Value VM::read_constant_24() {
     int constant = this->read_unsigned_24();
-    return this->chunk->constants.values[constant];
+    return chunk()->constants.values[constant];
 }
 
 inline InterpretResult VM::run() {
@@ -118,8 +126,8 @@ inline InterpretResult VM::run() {
             printf("\n");
 
             // print instruction
-            int offset = this->ip - this->chunk->code;
-            print_instruction(this->chunk, offset);
+            int offset = frame()->ip - chunk()->code;
+            print_instruction(chunk(), offset);
         }
         #endif
 
@@ -230,33 +238,33 @@ inline InterpretResult VM::run() {
 
         case OP_GET_LOCAL: {
             int index = read_byte();
-            push(this->stack[index]);
+            push(frame()->values[index]);
             break;
         }
         case OP_GET_LOCAL_16: {
             int index = read_unsigned_16();
-            push(this->stack[index]);
+            push(frame()->values[index]);
             break;
         }
         case OP_GET_LOCAL_24: {
             int index = read_unsigned_24();
-            push(this->stack[index]);
+            push(frame()->values[index]);
             break;
         }
 
         case OP_SET_LOCAL: {
             int index = read_byte();
-            this->stack[index] = peek(0);
+            frame()->values[index] = peek(0);
             break;
         }
         case OP_SET_LOCAL_16: {
             int index = read_unsigned_16();
-            this->stack[index] = peek(0);
+            frame()->values[index] = peek(0);
             break;
         }
         case OP_SET_LOCAL_24: {
             int index = read_unsigned_24();
-            this->stack[index] = peek(0);
+            frame()->values[index] = peek(0);
             break;
         }
 
@@ -352,20 +360,20 @@ inline InterpretResult VM::run() {
         }
         case OP_JUMP: {
             int jump = read_signed_16();
-            this->ip += jump;
+            frame()->ip += jump;
             break;
         }
         case OP_JUMP_IF_FALSE: {
             int jump = read_signed_16();
             if (!is_truthy(peek(0))) {
-                this->ip += jump;
+                frame()->ip += jump;
             }
             break;
         }
         case OP_JUMP_IF_TRUE: {
             int jump = read_signed_16();
             if (is_truthy(peek(0))) {
-                this->ip += jump;
+                frame()->ip += jump;
             }
             break;
         }
