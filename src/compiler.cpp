@@ -24,7 +24,13 @@ enum Precedence {
     PREC_FACTOR,        // * /
     PREC_UNARY,         // ! -
     PREC_CALL,          // . ()
-    PREC_PRIMARY
+    PREC_PRIMARY,
+};
+
+enum FunctionType {
+    TYPE_SCRIPT,
+    TYPE_ANONYMOUS,
+    TYPE_FUNCTION,
 };
 
 typedef void (*ParseFn)(bool lvalue);
@@ -55,6 +61,7 @@ static void number(bool lvalue);
 static void literal(bool lvalue);
 static void string(bool lvalue);
 static void variable(bool lvalue);
+static void function(bool lvalue);
 static void and_(bool lvalue);
 static void or_(bool lvalue);
 
@@ -95,7 +102,7 @@ static ParseRule rules[] = {
     [TOKEN_ELSE]            = {NULL,     NULL,   PREC_NONE},
     [TOKEN_FALSE]           = {literal,  NULL,   PREC_NONE},
     [TOKEN_FOR]             = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_FUN]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_FUN]             = {function, NULL,   PREC_NONE},
     [TOKEN_IF]              = {NULL,     NULL,   PREC_NONE},
     [TOKEN_NIL]             = {literal,  NULL,   PREC_NONE},
     [TOKEN_OR]              = {NULL,     or_,    PREC_OR},
@@ -317,10 +324,10 @@ static int parse_variable(const char* err_msg) {
     if (!declare_variable()) return -1;
 
     if (scope_depth > 0) {
-        // local - index is the most recently declared variable above
+        // local: index is the most recently declared variable above
         return local_count - 1;
     } else {
-        // global - index is to a constant for variable name
+        // global: index is to a constant for variable name
         return make_identifier_constant(&parser.previous);
     }
 }
@@ -494,6 +501,13 @@ static void or_(bool _lvalue) {
 
     patch_jump(jump, here());
 }
+
+static void function_helper(FunctionType type);
+
+static void function(bool _lvalue) {
+    function_helper(TYPE_ANONYMOUS);
+}
+
 
 //
 // Statements
@@ -712,6 +726,23 @@ static void statement(LoopContext* loop_ctx) {
     }
 }
 
+static void fun_decl() {
+    int index = parse_variable("Expect function name.");
+    if (index < 0) return;
+
+    int line = parser.line();
+    if (scope_depth > 0) {
+        // mark initialized, so function can refer to itself by name
+        define_local(index);
+    }
+
+    function_helper(TYPE_FUNCTION);
+
+    if (scope_depth == 0) {
+        emit_define_global(index, line);
+    }
+}
+
 static void var_decl() {
     int index = parse_variable("Expect variable name.");
     if (index < 0) return;
@@ -723,7 +754,7 @@ static void var_decl() {
         expression();
     } else {
         // use nil as initial value
-        emit_byte(OP_NIL, parser.line());
+        emit_byte(OP_NIL, line);
     }
 
     parser.consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
@@ -736,13 +767,43 @@ static void var_decl() {
 }
 
 static void declaration(LoopContext* loop_ctx) {
-    if (parser.match(TOKEN_VAR)) {
+    if (parser.match(TOKEN_FUN)) {
+        fun_decl();
+    } else if (parser.match(TOKEN_VAR)) {
         var_decl();
     } else {
         statement(loop_ctx);
     }
 
     parser.synchronize();
+}
+
+static void function_helper(FunctionType type) {
+
+    const char* msg;
+    switch (type) {
+        case TYPE_ANONYMOUS:
+            msg = "Expect '(' after fun.";
+            break;
+        case TYPE_SCRIPT:
+            msg = "Internal error.  TYPE_SCRIPT should not be parsed with function_helper()";
+            break;
+        case TYPE_FUNCTION:
+            msg = "Expect '(' after function name.";
+            break;
+    }
+
+    parser.consume(TOKEN_LEFT_PAREN, msg);
+    parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
+    parser.consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+
+    begin_scope();
+    block(NULL);
+
+    // no need for end_scope()
+    end_compiler();
+
+    // TODO: finish
 }
 
 
