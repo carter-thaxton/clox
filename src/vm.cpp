@@ -1,7 +1,8 @@
 #include "vm.h"
 #include "memory.h"
-
+#include "globals.h"
 #include "debug.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -9,6 +10,7 @@
 VM::VM() {
     this->objects = NULL;
     reset_stack();
+    define_globals(this);
 }
 
 VM::~VM() {
@@ -156,8 +158,16 @@ inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
 inline InterpretResult VM::call_value(Value callee, int argc) {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
-        case OBJ_FUNCTION:
+        case OBJ_FUNCTION: {
             return call_function(AS_FUNCTION(callee), argc);
+        }
+        case OBJ_NATIVE: {
+            NativeFn fn = AS_NATIVE(callee)->fn;
+            Value result = fn(argc, stack_top - argc);
+            stack_top -= argc + 1;  // pop args and fn
+            push(result);
+            return INTERPRET_OK;
+        }
         default:
             ; // not callable
         }

@@ -6,9 +6,12 @@
 
 struct VM;
 
+typedef Value (*NativeFn) (int argc, Value* args);
+
 enum ObjType {
     OBJ_STRING,
     OBJ_FUNCTION,
+    OBJ_NATIVE,
 };
 
 struct Obj {
@@ -30,6 +33,11 @@ struct ObjFunction {
     Chunk chunk;
 };
 
+struct ObjNative {
+    Obj obj;
+    NativeFn fn;
+};
+
 #define OBJ_TYPE(value)     (AS_OBJ(value)->type)
 
 #define IS_STRING(value)    (is_obj_type(value, OBJ_STRING))
@@ -38,6 +46,9 @@ struct ObjFunction {
 
 #define IS_FUNCTION(value)  (is_obj_type(value, OBJ_FUNCTION))
 #define AS_FUNCTION(value)  ((ObjFunction*) AS_OBJ(value))
+
+#define IS_NATIVE(value)    (is_obj_type(value, OBJ_NATIVE))
+#define AS_NATIVE(value)    ((ObjNative*) AS_OBJ(value))
 
 #define STRING_MAX_LEN      0x7FFFFF00
 
@@ -54,3 +65,4 @@ Value string_value(VM* vm, const char* str, int length);
 Value concatenate_strings(VM* vm, Value a, Value b);
 
 ObjFunction* new_function(VM* vm);
+Value define_native(VM* vm, const char* name, NativeFn fn);

@@ -21,9 +21,14 @@ void free_object(Obj* object) {
             break;
         }
         case OBJ_FUNCTION: {
-            ObjFunction* fcn = (ObjFunction*) object;
-            fcn->chunk.~Chunk();
-            FREE(ObjFunction, fcn);
+            ObjFunction* fn = (ObjFunction*) object;
+            fn->chunk.~Chunk();
+            FREE(ObjFunction, fn);
+            break;
+        }
+        case OBJ_NATIVE: {
+            ObjNative* fn = (ObjNative*) object;
+            FREE(ObjNative, fn);
             break;
         }
     }
@@ -103,4 +108,17 @@ ObjFunction* new_function(VM* vm) {
     vm->register_object((Obj*) result);
 
     return result;
+}
+
+Value define_native(VM* vm, const char* name, NativeFn fn) {
+    ObjNative* fn_obj = (ObjNative*) alloc_object(sizeof(ObjNative), OBJ_NATIVE);
+    fn_obj->fn = fn;
+    Value fn_val = OBJ_VAL(fn_obj);
+
+    Value name_val = string_value(vm, name, strlen(name));
+    vm->register_object((Obj*) fn_obj);
+    vm->globals.insert(AS_STRING(name_val), fn_val);
+
+    // push/pop for GC?
+    return fn_val;
 }

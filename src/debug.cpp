@@ -225,6 +225,10 @@ void print_object(Obj* object) {
             }
             return;
         }
+        case OBJ_NATIVE: {
+            printf("<native fn>");
+            return;
+        }
     }
 }
 

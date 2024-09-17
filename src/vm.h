@@ -77,4 +77,5 @@ private:
 
     friend Value string_value(VM* vm, const char* str, int length);
     friend Value concatenate_strings(VM* vm, Value a, Value b);
+    friend Value define_native(VM* vm, const char* name, NativeFn fn);
 };
