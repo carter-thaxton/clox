@@ -38,12 +38,12 @@ public:
     Table* get_globals() { return &globals; }
 
 private:
-    // some fast-path inlined functions
-    InterpretResult run();
-    InterpretResult runtime_error(const char* format, ...);
     void reset_stack();
     void free_objects();
 
+    InterpretResult runtime_error(const char* format, ...);
+
+    // some fast-path inlined functions
     CallFrame* frame();
     Chunk* chunk();
 
@@ -60,6 +60,11 @@ private:
     Value peek(int depth);
     Value pop();
     void pop_n(int n);
+
+    InterpretResult call_function(ObjFunction* fn, int argc);
+    InterpretResult call_value(Value callee, int argc);
+
+    InterpretResult run();
 
     CallFrame frames[FRAME_MAX];
     int frame_count;

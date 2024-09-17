@@ -15,20 +15,11 @@ VM::~VM() {
     free_objects();
 }
 
-void VM::reset_stack() {
-    this->stack_top = this->stack;
-    this->frame_count = 0;
-}
-
 InterpretResult VM::interpret(ObjFunction* main_fn) {
     assert(main_fn->obj.type == OBJ_FUNCTION);
 
-    CallFrame* frame = &frames[frame_count++];
-    frame->fn = main_fn;
-    frame->ip = main_fn->chunk.code;
-    frame->values = this->stack_top;
-
     push(OBJ_VAL(main_fn));
+    call_function(main_fn, 0);
 
     return run();
 }
@@ -37,6 +28,11 @@ void VM::register_object(Obj* object) {
     object->next = this->objects;
     this->objects = object;
     this->object_count++;
+}
+
+void VM::reset_stack() {
+    this->stack_top = this->stack;
+    this->frame_count = 0;
 }
 
 void VM::free_objects() {
@@ -59,9 +55,19 @@ InterpretResult VM::runtime_error(const char* format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    size_t inst_offset = frame()->ip - chunk()->code - 1;
-    int line = chunk()->lines[inst_offset];
-    fprintf(stderr, "[line %d] in script\n", line);
+    // print stack-trace
+    for (int i = frame_count - 1; i >= 0; i--) {
+        CallFrame* frame = &frames[i];
+        ObjFunction* fn = frame->fn;
+        size_t inst_offset = frame->ip - fn->chunk.code - 1;
+        int line = fn->chunk.lines[inst_offset];
+        fprintf(stderr, "[line %d] in ", line);
+        if (fn->name == NULL) {
+            fprintf(stderr, "script\n");
+        } else {
+            fprintf(stderr, "%s()\n", fn->name->chars);
+        }
+    }
 
     reset_stack();
     return INTERPRET_RUNTIME_ERROR;
@@ -111,6 +117,52 @@ inline Value VM::read_constant_16() {
 inline Value VM::read_constant_24() {
     int constant = this->read_unsigned_24();
     return chunk()->constants.values[constant];
+}
+
+inline void VM::push(Value value) {
+    *this->stack_top = value;
+    this->stack_top++;
+}
+
+inline Value VM::peek(int depth) {
+    return this->stack_top[-1 - depth];
+}
+
+inline Value VM::pop() {
+    this->stack_top--;
+    return *this->stack_top;
+}
+
+inline void VM::pop_n(int n) {
+    this->stack_top -= n;
+}
+
+inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
+    if (argc != fn->arity) {
+        return runtime_error("Expected %d arguments but got %d.", fn->arity, argc);
+    }
+    if (frame_count >= FRAME_MAX) {
+        return runtime_error("Stack overflow.");
+    }
+
+    CallFrame* f = &frames[frame_count++];
+    f->fn = fn;
+    f->ip = fn->chunk.code;
+    f->values = stack_top - argc - 1;  // include args and the fn itself
+
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VM::call_value(Value callee, int argc) {
+    if (IS_OBJ(callee)) {
+        switch (OBJ_TYPE(callee)) {
+        case OBJ_FUNCTION:
+            return call_function(AS_FUNCTION(callee), argc);
+        default:
+            ; // not callable
+        }
+    }
+    return runtime_error("Can only call functions and classes.");
 }
 
 inline InterpretResult VM::run() {
@@ -360,8 +412,16 @@ inline InterpretResult VM::run() {
             break;
         }
         case OP_RETURN: {
-            // exit
-            return INTERPRET_OK;
+            Value result = pop();
+            Value* frame_top = frame()->values;
+            frame_count--;
+            if (frame_count <= 0) {
+                pop();  // pop main script fn
+                return INTERPRET_OK;
+            }
+            stack_top = frame_top;
+            push(result);
+            break;
         }
         case OP_JUMP: {
             int jump = read_signed_16();
@@ -382,28 +442,16 @@ inline InterpretResult VM::run() {
             }
             break;
         }
+        case OP_CALL: {
+            int arg_count = read_byte();
+            InterpretResult result = call_value(peek(arg_count), arg_count);
+            if (result != INTERPRET_OK) return result;
+            break;
+        }
 
         default:
             return runtime_error("Undefined opcode: %d", inst);
             ; // nothing
         }
     }
-}
-
-inline void VM::push(Value value) {
-    *this->stack_top = value;
-    this->stack_top++;
-}
-
-inline Value VM::peek(int depth) {
-    return this->stack_top[-1 - depth];
-}
-
-inline Value VM::pop() {
-    this->stack_top--;
-    return *this->stack_top;
-}
-
-inline void VM::pop_n(int n) {
-    this->stack_top -= n;
 }

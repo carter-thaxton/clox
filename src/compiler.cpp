@@ -57,6 +57,7 @@ struct LoopContext {
 struct Compiler {
     Compiler* parent;
     ObjFunction *fn;
+    FunctionType type;
     int local_count;
     int scope_depth;
     Local locals[MAX_LOCALS];
@@ -73,13 +74,14 @@ static void variable(bool lvalue);
 static void function(bool lvalue);
 static void and_(bool lvalue);
 static void or_(bool lvalue);
+static void call(bool lvalue);
 
 
 static ParseRule rules[] = {
     [TOKEN_EOF]             = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ERROR]           = {NULL,     NULL,   PREC_NONE},
 
-    [TOKEN_LEFT_PAREN]      = {grouping, NULL,   PREC_NONE},
+    [TOKEN_LEFT_PAREN]      = {grouping, call,   PREC_CALL},
     [TOKEN_RIGHT_PAREN]     = {NULL,     NULL,   PREC_NONE},
     [TOKEN_LEFT_BRACE]      = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RIGHT_BRACE]     = {NULL,     NULL,   PREC_NONE},
@@ -198,10 +200,6 @@ static void patch_jump(int placeholder_index, int to_index) {
     // placeholder_index points to just after a big-endian 16-bit value
     code[placeholder_index-2] = jump & 0xFF;
     code[placeholder_index-1] = (jump >> 8) & 0xFF;
-}
-
-static void emit_return(int line) {
-    emit_byte(OP_RETURN, line);
 }
 
 // emit OP_POP and OP_POPN instructions
@@ -353,6 +351,7 @@ static void end_scope() {
 static void init_compiler(Compiler* compiler, FunctionType type) {
     compiler->parent = current;
     compiler->fn = new_function(compiling_vm);
+    compiler->type = type;
     compiler->local_count = 0;
     compiler->scope_depth = 0;
 
@@ -374,7 +373,7 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
 }
 
 static ObjFunction* end_compiler() {
-    emit_return(parser.line());
+    emit_bytes(OP_NIL, OP_RETURN, parser.line());
 
     #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error()) {
@@ -393,6 +392,8 @@ static ObjFunction* end_compiler() {
 //
 // Expressions
 //
+
+static void function_helper(FunctionType type);
 
 static ParseRule* get_rule(TokenType op_type) {
     return &rules[op_type];
@@ -515,6 +516,10 @@ static void variable(bool lvalue) {
     }
 }
 
+static void function(bool _lvalue) {
+    function_helper(TYPE_ANONYMOUS);
+}
+
 static void and_(bool _lvalue) {
     int line = parser.line();
     int jump = emit_jump(OP_JUMP_IF_FALSE, line);
@@ -535,10 +540,26 @@ static void or_(bool _lvalue) {
     patch_jump(jump, here());
 }
 
-static void function_helper(FunctionType type);
+static int arguments() {
+    int count = 0;
+    if (!parser.check(TOKEN_RIGHT_PAREN)) {
+        do {
+            if (count >= 255) {
+                parser.error("Can't have more than 255 arguments.");
+                break;
+            }
+            expression();
+            count++;
+        } while (parser.match(TOKEN_COMMA));
+    }
+    parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+    return count;
+}
 
-static void function(bool _lvalue) {
-    function_helper(TYPE_ANONYMOUS);
+static void call(bool _lvalue) {
+    int line = parser.line();
+    int arg_count = arguments();
+    emit_bytes(OP_CALL, arg_count, line);
 }
 
 
@@ -728,6 +749,21 @@ static void continue_stmt(LoopContext* loop_ctx) {
     parser.consume(TOKEN_SEMICOLON, "Expect ';' after 'continue'.");
 }
 
+static void return_stmt(LoopContext* loop_ctx) {
+    if (current->type == TYPE_SCRIPT) {
+        return parser.error("Can't return from top-level code.");
+    }
+
+    int line = parser.line();
+    if (parser.match(TOKEN_SEMICOLON)) {
+        emit_bytes(OP_NIL, OP_RETURN, line);
+    } else {
+        expression();
+        parser.consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
+        emit_byte(OP_RETURN, line);
+    }
+}
+
 static void block(LoopContext* loop_ctx) {
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
         declaration(loop_ctx);
@@ -750,6 +786,8 @@ static void statement(LoopContext* loop_ctx) {
         break_stmt(loop_ctx);
     } else if (parser.match(TOKEN_CONTINUE)) {
         continue_stmt(loop_ctx);
+    } else if (parser.match(TOKEN_RETURN)) {
+        return_stmt(loop_ctx);
     } else if (parser.match(TOKEN_LEFT_BRACE)) {
         begin_scope();
         block(loop_ctx);
@@ -812,7 +850,6 @@ static void declaration(LoopContext* loop_ctx) {
 }
 
 static void function_helper(FunctionType type) {
-
     const char* msg;
     switch (type) {
         case TYPE_ANONYMOUS:
@@ -831,6 +868,20 @@ static void function_helper(FunctionType type) {
     begin_scope();
 
     parser.consume(TOKEN_LEFT_PAREN, msg);
+
+    // parse params
+    if (!parser.check(TOKEN_RIGHT_PAREN)) {
+        do {
+            if (current->fn->arity >= 255) {
+                parser.error_at_current("Can't have more than 255 parameters.");
+                break;
+            }
+            current->fn->arity++;
+            int index = parse_variable("Expect parameter name.");
+            define_local(index);
+        } while (parser.match(TOKEN_COMMA));
+    }
+
     parser.consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
     parser.consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
 

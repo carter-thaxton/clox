@@ -169,6 +169,8 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_signed_16_inst("OP_JUMP_IF_FALSE", chunk, offset);
     case OP_JUMP_IF_TRUE:
         return print_signed_16_inst("OP_JUMP_IF_TRUE", chunk, offset);
+    case OP_CALL:
+        return print_index_inst("OP_CALL", chunk, offset);
 
     default:
         printf("Unknown opcode %d\n", inst);
