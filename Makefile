@@ -32,7 +32,7 @@ makedir:
 	@mkdir -p $(BIN_PATH) $(OBJ_PATH)
 
 .PHONY: all
-all: $(TARGET) test/test.pyc
+all: $(TARGET) test/test.pyc bin/test
 
 .PHONY: clean
 clean:
@@ -49,3 +49,9 @@ test: test/test.pyc
 
 test/test.pyc: test/test.py
 	python3 -m compileall -b test/test.py
+
+# test.cpp
+SRC_TEST := test/test.cpp
+OBJ_TEST := $(filter-out $(OBJ_PATH)/main.o,$(OBJ))
+$(BIN_PATH)/test: $(OBJ_TEST) $(SRC_TEST)
+	$(CC) $(CFLAGS) $(LFLAGS) -o $@ -I$(SRC_PATH) $(SRC_TEST) $(OBJ_TEST)
