@@ -72,16 +72,19 @@ bool Table::insert(ObjString* key, Value value) {
     }
 
     Entry* entry = find_entry_helper(this->entries, this->capacity, key);
-    bool new_key = entry->key == NULL;
+    bool is_new_key = entry->key == NULL;
+    bool is_tombstone = !IS_NIL(entry->value);
     entry->key = key;
     entry->value = value;
 
-    if (new_key) {
+    if (is_new_key) {
         count++;
-        if (IS_NIL(value)) count_with_tombstones++;
+    }
+    if (is_new_key || is_tombstone) {
+        count_with_tombstones++;
     }
 
-    return new_key;
+    return is_new_key;
 }
 
 int Table::insert_all(Table* from) {
@@ -90,8 +93,8 @@ int Table::insert_all(Table* from) {
     for (int i = 0; i < from->capacity; i++) {
         Entry* entry = &from->entries[i];
         if (entry->key == NULL) continue;
-        bool new_key = insert(entry->key, entry->value);
-        if (new_key) result++;
+        bool is_new_key = insert(entry->key, entry->value);
+        if (is_new_key) result++;
     }
     return result;
 }
