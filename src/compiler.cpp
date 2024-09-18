@@ -258,6 +258,7 @@ static bool declare_local(Token* token) {
 // assertion error if called without corresponding declare_local()
 static void define_local(int index) {
     assert(current->local_count > 0);
+    assert(index >= 0);
     assert(index < current->local_count);
     Local* local = &current->locals[index];
     assert(local->depth < 0);
@@ -878,7 +879,7 @@ static void function_helper(FunctionType type) {
             }
             current->fn->arity++;
             int index = parse_variable("Expect parameter name.");
-            define_local(index);
+            if (index < 0) break;
         } while (parser.match(TOKEN_COMMA));
     }
 
