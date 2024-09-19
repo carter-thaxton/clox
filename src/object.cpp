@@ -112,7 +112,7 @@ ObjFunction* new_function(VM* vm) {
 
 Value define_native(VM* vm, const char* name, NativeFn fn) {
     ObjNative* fn_obj = (ObjNative*) alloc_object(sizeof(ObjNative), OBJ_NATIVE);
-    fn_obj->fn = fn;
+    fn_obj->native_fn = fn;
     Value fn_val = OBJ_VAL(fn_obj);
 
     Value name_val = string_value(vm, name, strlen(name));

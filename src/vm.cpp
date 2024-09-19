@@ -162,8 +162,8 @@ inline InterpretResult VM::call_value(Value callee, int argc) {
             return call_function(AS_FUNCTION(callee), argc);
         }
         case OBJ_NATIVE: {
-            NativeFn fn = AS_NATIVE(callee)->fn;
-            Value result = fn(argc, stack_top - argc);
+            NativeFn native_fn = AS_NATIVE(callee)->native_fn;
+            Value result = native_fn(argc, stack_top - argc);
             stack_top -= argc + 1;  // pop args and fn
             push(result);
             return INTERPRET_OK;

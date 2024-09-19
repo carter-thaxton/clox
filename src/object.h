@@ -35,7 +35,7 @@ struct ObjFunction {
 
 struct ObjNative {
     Obj obj;
-    NativeFn fn;
+    NativeFn native_fn;
 };
 
 #define OBJ_TYPE(value)     (AS_OBJ(value)->type)
