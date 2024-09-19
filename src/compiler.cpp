@@ -364,17 +364,33 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
     local->name.line = 0;
     local->name.type = TOKEN_FUN;
 
-    // use previous token as function name
-    if (type == TYPE_FUNCTION) {
-        Value fn_name = string_value(compiling_vm, parser.previous.start, parser.previous.length);
-        compiler->fn->name = AS_STRING(fn_name);
+    switch (type) {
+        case TYPE_FUNCTION: {
+            // use previous token as function name
+            Value fn_name = string_value(compiling_vm, parser.previous.start, parser.previous.length);
+            compiler->fn->name = AS_STRING(fn_name);
+            break;
+        }
+        case TYPE_ANONYMOUS: {
+            // use "" as function name
+            Value fn_name = string_value(compiling_vm, "", 0);
+            compiler->fn->name = AS_STRING(fn_name);
+            break;
+        }
+        default: {
+            // leave function name as nil
+        }
     }
 
     current = compiler;
 }
 
 static ObjFunction* end_compiler() {
-    emit_bytes(OP_NIL, OP_RETURN, parser.line());
+    // emit return nil, unless previous instruction was already an explicit return
+    bool prev_return = current_chunk()->length > 0 && current_chunk()->read_back(0) == OP_RETURN;
+    if (!prev_return) {
+        emit_bytes(OP_NIL, OP_RETURN, parser.line());
+    }
 
     #ifdef DEBUG_PRINT_CODE
     if (!parser.had_error()) {

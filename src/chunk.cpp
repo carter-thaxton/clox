@@ -34,6 +34,10 @@ void Chunk::write(uint8_t byte, int line) {
     this->length++;
 }
 
+uint8_t Chunk::read_back(int offset) {
+    assert(offset < this->length);
+    return this->code[this->length - 1 - offset];
+}
 
 // Support a family of 8/16/24-bit OpCodes, which refer to a non-negative numeric index, like constants or locals.
 // This assumes that base_op is the 8-bit code, with 16-bit as the next numeric opcode, followed by 24-bit

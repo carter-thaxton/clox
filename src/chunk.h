@@ -60,6 +60,7 @@ struct Chunk {
     ~Chunk();
 
     void write(uint8_t byte, int line);
+    uint8_t read_back(int offset);
 
     void write_constant(int constant, int line);
     void write_define_global(int constant, int line);
