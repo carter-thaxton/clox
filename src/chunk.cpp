@@ -70,6 +70,10 @@ void Chunk::write_constant(int constant, int line) {
     write_variable_length_opcode(this, OP_CONSTANT, constant, line);
 }
 
+void Chunk::write_closure(int constant, int line) {
+    write_variable_length_opcode(this, OP_CLOSURE, constant, line);
+}
+
 void Chunk::write_define_global(int constant, int line) {
     write_variable_length_opcode(this, OP_DEFINE_GLOBAL, constant, line);
 }
@@ -90,12 +94,6 @@ void Chunk::write_set_local(int index, int line) {
     write_variable_length_opcode(this, OP_SET_LOCAL, index, line);
 }
 
-
-int Chunk::write_constant_value(Value value, int line) {
-    int constant = this->add_constant_value(value);
-    write_constant(constant, line);
-    return constant;
-}
 
 int Chunk::add_constant_value(Value value) {
     // check if value has already been added

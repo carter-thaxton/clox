@@ -12,6 +12,8 @@ enum ObjType {
     OBJ_STRING,
     OBJ_FUNCTION,
     OBJ_NATIVE,
+    OBJ_UPVALUE,
+    OBJ_CLOSURE,
 };
 
 struct Obj {
@@ -29,13 +31,28 @@ struct ObjString {
 struct ObjFunction {
     Obj obj;
     ObjString* name;
-    int arity;
+    uint32_t arity;
+    uint32_t upvalue_count;
     Chunk chunk;
 };
 
 struct ObjNative {
     Obj obj;
     NativeFn native_fn;
+};
+
+struct ObjUpvalue {
+    Obj obj;
+    Value closed;
+    Value* location;
+    ObjUpvalue* next;
+};
+
+struct ObjClosure {
+    Obj obj;
+    ObjFunction* fn;
+    uint32_t upvalue_count;
+    ObjUpvalue* upvalues[];
 };
 
 #define OBJ_TYPE(value)     (AS_OBJ(value)->type)
@@ -49,6 +66,12 @@ struct ObjNative {
 
 #define IS_NATIVE(value)    (is_obj_type(value, OBJ_NATIVE))
 #define AS_NATIVE(value)    ((ObjNative*) AS_OBJ(value))
+
+#define IS_UPVALUE(value)   (is_obj_type(value, OBJ_UPVALUE))
+#define AS_UPVALUE(value)   ((ObjUpvalue*) AS_OBJ(value))
+
+#define IS_CLOSURE(value)   (is_obj_type(value, OBJ_CLOSURE))
+#define AS_CLOSURE(value)   ((ObjClosure*) AS_OBJ(value))
 
 #define STRING_MAX_LEN      0x7FFFFF00
 
@@ -66,3 +89,5 @@ Value concatenate_strings(VM* vm, Value a, Value b);
 
 ObjFunction* new_function(VM* vm);
 Value define_native(VM* vm, const char* name, NativeFn fn);
+
+ObjClosure* new_closure(VM* vm, ObjFunction* fn);

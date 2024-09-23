@@ -66,6 +66,19 @@ static int print_signed_16_inst(const char* name, Chunk* chunk, int offset) {
     return offset + 3;
 }
 
+// TODO: print closures as more than constants
+static int print_closure_inst(const char* name, Chunk* chunk, int offset) {
+    return print_constant_inst(name, chunk, offset);
+}
+
+static int print_closure_16_inst(const char* name, Chunk* chunk, int offset) {
+    return print_constant_16_inst(name, chunk, offset);
+}
+
+static int print_closure_24_inst(const char* name, Chunk* chunk, int offset) {
+    return print_constant_24_inst(name, chunk, offset);
+}
+
 void print_chunk(Chunk* chunk, const char* name) {
     printf("== %s ==\n", name);
 
@@ -99,6 +112,13 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_constant_16_inst("OP_CONSTANT_16", chunk, offset);
     case OP_CONSTANT_24:
         return print_constant_24_inst("OP_CONSTANT_24", chunk, offset);
+
+    case OP_CLOSURE:
+        return print_closure_inst("OP_CLOSURE", chunk, offset);
+    case OP_CLOSURE_16:
+        return print_closure_inst("OP_CLOSURE_16", chunk, offset);
+    case OP_CLOSURE_24:
+        return print_closure_inst("OP_CLOSURE_24", chunk, offset);
 
     case OP_DEFINE_GLOBAL:
         return print_constant_inst("OP_DEFINE_GLOBAL", chunk, offset);
@@ -134,6 +154,20 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_index_16_inst("OP_SET_LOCAL_16", chunk, offset);
     case OP_SET_LOCAL_24:
         return print_index_24_inst("OP_SET_LOCAL_24", chunk, offset);
+
+    case OP_GET_UPVALUE:
+        return print_index_inst("OP_GET_UPVALUE", chunk, offset);
+    case OP_GET_UPVALUE_16:
+        return print_index_16_inst("OP_GET_UPVALUE_16", chunk, offset);
+    case OP_GET_UPVALUE_24:
+        return print_index_24_inst("OP_GET_UPVALUE_24", chunk, offset);
+
+    case OP_SET_UPVALUE:
+        return print_index_inst("OP_SET_UPVALUE", chunk, offset);
+    case OP_SET_UPVALUE_16:
+        return print_index_16_inst("OP_SET_UPVALUE_16", chunk, offset);
+    case OP_SET_UPVALUE_24:
+        return print_index_24_inst("OP_SET_UPVALUE_24", chunk, offset);
 
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
@@ -227,6 +261,15 @@ void print_object(Obj* object) {
         }
         case OBJ_NATIVE: {
             printf("<native fn>");
+            return;
+        }
+        case OBJ_UPVALUE: {
+            printf("<native fn>");
+            return;
+        }
+        case OBJ_CLOSURE: {
+            ObjString* name = ((ObjClosure*) object)->fn->name;
+            printf("<fn %s>", name->chars);
             return;
         }
     }

@@ -149,7 +149,25 @@ inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
 
     CallFrame* f = &frames[frame_count++];
     f->fn = fn;
+    f->closure = NULL;
     f->ip = fn->chunk.code;
+    f->values = stack_top - argc - 1;  // include args and the fn itself
+
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VM::call_closure(ObjClosure* closure, int argc) {
+    if (argc != closure->fn->arity) {
+        return runtime_error("Expected %d arguments but got %d.", closure->fn->arity, argc);
+    }
+    if (frame_count >= FRAME_MAX) {
+        return runtime_error("Stack overflow.");
+    }
+
+    CallFrame* f = &frames[frame_count++];
+    f->fn = closure->fn;
+    f->closure = closure;
+    f->ip = closure->fn->chunk.code;
     f->values = stack_top - argc - 1;  // include args and the fn itself
 
     return INTERPRET_OK;
@@ -167,6 +185,9 @@ inline InterpretResult VM::call_value(Value callee, int argc) {
             stack_top -= argc + 1;  // pop args and fn
             push(result);
             return INTERPRET_OK;
+        }
+        case OBJ_CLOSURE: {
+            return call_closure(AS_CLOSURE(callee), argc);
         }
         default:
             ; // not callable

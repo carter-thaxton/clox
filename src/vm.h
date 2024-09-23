@@ -17,6 +17,7 @@ enum InterpretResult {
 
 struct CallFrame {
     ObjFunction* fn;
+    ObjClosure* closure;
     uint8_t* ip;
     Value* values;
 };
@@ -62,6 +63,7 @@ private:
     void pop_n(int n);
 
     InterpretResult call_function(ObjFunction* fn, int argc);
+    InterpretResult call_closure(ObjClosure* closure, int argc);
     InterpretResult call_value(Value callee, int argc);
 
     InterpretResult run();

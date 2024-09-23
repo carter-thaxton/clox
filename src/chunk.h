@@ -14,6 +14,10 @@ enum OpCode {
     OP_CONSTANT_16,
     OP_CONSTANT_24,
 
+    OP_CLOSURE,
+    OP_CLOSURE_16,
+    OP_CLOSURE_24,
+
     OP_DEFINE_GLOBAL,
     OP_DEFINE_GLOBAL_16,
     OP_DEFINE_GLOBAL_24,
@@ -33,6 +37,14 @@ enum OpCode {
     OP_SET_LOCAL,
     OP_SET_LOCAL_16,
     OP_SET_LOCAL_24,
+
+    OP_GET_UPVALUE,
+    OP_GET_UPVALUE_16,
+    OP_GET_UPVALUE_24,
+
+    OP_SET_UPVALUE,
+    OP_SET_UPVALUE_16,
+    OP_SET_UPVALUE_24,
 
     OP_ADD,
     OP_SUBTRACT,
@@ -63,13 +75,13 @@ struct Chunk {
     uint8_t read_back(int offset);
 
     void write_constant(int constant, int line);
+    void write_closure(int constant, int line);
     void write_define_global(int constant, int line);
     void write_get_global(int constant, int line);
     void write_set_global(int constant, int line);
     void write_get_local(int index, int line);
     void write_set_local(int index, int line);
 
-    int write_constant_value(Value value, int line);
     int add_constant_value(Value value);
 
     uint8_t* code;

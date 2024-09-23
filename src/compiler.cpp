@@ -150,11 +150,23 @@ static void emit_bytes(uint8_t byte1, uint8_t byte2, int line) {
 }
 
 static int emit_constant(Value value) {
-    int index = current_chunk()->write_constant_value(value, parser.line());
+    int index = current_chunk()->add_constant_value(value);
     if (index > MAX_INDEX) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
+    current_chunk()->write_constant(index, parser.line());
+    return index;
+}
+
+static int emit_closure(Value value) {
+    assert(IS_CLOSURE(value));
+    int index = current_chunk()->add_constant_value(value);
+    if (index > MAX_INDEX) {
+        parser.error("Too many constants in one chunk.");
+        return -1;
+    }
+    current_chunk()->write_closure(index, parser.line());
     return index;
 }
 
@@ -905,9 +917,17 @@ static void function_helper(FunctionType type) {
     block(NULL);
 
     // no need for end_scope()
-    ObjFunction* result = end_compiler();
+    ObjFunction* fn = end_compiler();
 
-    emit_constant(OBJ_VAL(result));
+    // only create closure when necessary
+    if (fn->upvalue_count > 0) {
+        // closure with dedicated instruction
+        ObjClosure* closure = new_closure(compiling_vm, fn);
+        emit_closure(OBJ_VAL(closure));
+    } else {
+        // function as constant
+        emit_constant(OBJ_VAL(fn));
+    }
 }
 
 

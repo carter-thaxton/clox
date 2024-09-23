@@ -16,7 +16,7 @@ void free_object(Obj* object) {
     switch (object->type) {
         case OBJ_STRING: {
             ObjString* string = (ObjString*) object;
-            size_t size = sizeof(ObjString) + string->length + 1;
+            size_t size = sizeof(ObjString) + (string->length + 1) * sizeof(char);
             reallocate(string, size, 0);
             break;
         }
@@ -29,6 +29,17 @@ void free_object(Obj* object) {
         case OBJ_NATIVE: {
             ObjNative* fn = (ObjNative*) object;
             FREE(ObjNative, fn);
+            break;
+        }
+        case OBJ_UPVALUE: {
+            ObjUpvalue* upvalue = (ObjUpvalue*) object;
+            FREE(ObjUpvalue, upvalue);
+            break;
+        }
+        case OBJ_CLOSURE: {
+            ObjClosure* closure = (ObjClosure*) object;
+            size_t size = sizeof(ObjClosure) + closure->upvalue_count * sizeof(ObjUpvalue*);
+            reallocate(closure, size, 0);
             break;
         }
     }
@@ -53,7 +64,7 @@ Value string_value(VM* vm, const char* str, int length) {
 
     // <-- ObjString -->
     // [ type | length | chars ... ]
-    size_t size = sizeof(ObjString) + length + 1;
+    size_t size = sizeof(ObjString) + (length + 1) * sizeof(char);
     ObjString* result = (ObjString*) alloc_object(size, OBJ_STRING);
     memcpy(result->chars, str, length);
     result->chars[length] = '\0';
@@ -103,6 +114,7 @@ ObjFunction* new_function(VM* vm) {
 
     result->name = NULL;
     result->arity = 0;
+    result->upvalue_count = 0;
     new (&result->chunk) Chunk();
 
     vm->register_object((Obj*) result);
@@ -121,4 +133,19 @@ Value define_native(VM* vm, const char* name, NativeFn fn) {
 
     // push/pop for GC?
     return fn_val;
+}
+
+ObjClosure* new_closure(VM* vm, ObjFunction* fn) {
+    size_t size = sizeof(ObjClosure) + fn->upvalue_count * sizeof(ObjUpvalue*);
+    ObjClosure* result = (ObjClosure*) alloc_object(size, OBJ_CLOSURE);
+
+    result->fn = fn;
+    result->upvalue_count = fn->upvalue_count;
+    for (int i=0; i < fn->upvalue_count; i++) {
+        result->upvalues[i] = NULL;
+    }
+
+    vm->register_object((Obj*) result);
+
+    return result;
 }
