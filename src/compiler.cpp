@@ -985,6 +985,10 @@ static void function_helper(FunctionType type) {
     const char* msg;
     switch (type) {
         case TYPE_ANONYMOUS:
+            if (parser.check(TOKEN_IDENTIFIER)) {
+                // function declaration where only anonymous expression is allowed
+                return parser.error("Expect expression.");
+            }
             msg = "Expect '(' after fun.";
             break;
         case TYPE_SCRIPT:
