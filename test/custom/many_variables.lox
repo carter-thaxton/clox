@@ -1,0 +1,44 @@
+
+fun many_vars() {
+    var f;
+    {
+        var v0 = 0;
+        var v1 = 1;
+        var v2 = 2;
+        var v3 = 3;
+        var v4 = 4;
+        var v5 = 5;
+        var v6 = 6;
+        var v7 = 7;
+        var v8 = 8;
+        var v9 = 9;
+
+        fun closure() {
+            print v1;
+            print v6;
+            var x = 99;
+            fun inner() {
+                print v2;
+                print v7;
+                print x;
+            }
+            return inner;
+        }
+        f = closure;
+    }
+
+    return f();
+}
+
+print "here"; // expect: here
+
+var f = many_vars();
+// expect: 1
+// expect: 6
+
+print "here2"; // expect: here2
+
+f();
+// expect: 2
+// expect: 7
+// expect: 99
