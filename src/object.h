@@ -91,3 +91,4 @@ ObjFunction* new_function(VM* vm);
 Value define_native(VM* vm, const char* name, NativeFn fn);
 
 ObjClosure* new_closure(VM* vm, ObjFunction* fn);
+ObjUpvalue* new_upvalue(VM* vm, Value* value);

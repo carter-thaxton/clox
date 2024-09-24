@@ -12,7 +12,8 @@
 #endif
 
 #define MAX_BREAK_STMTS     64
-#define MAX_LOCALS          2048
+#define MAX_LOCALS          2048    // architecture limits these to 32767
+#define MAX_UPVALUES        2048    // (two bytes, with one bit used to distinguish between local vs upvalue)
 
 enum Precedence {
     PREC_NONE,
@@ -47,6 +48,11 @@ struct Local {
     int depth;
 };
 
+struct Upvalue {
+    int index;
+    bool is_local;
+};
+
 struct LoopContext {
     int scope_depth;
     int loop_start;
@@ -58,9 +64,11 @@ struct Compiler {
     Compiler* parent;
     ObjFunction *fn;
     FunctionType type;
-    int local_count;
     int scope_depth;
+    int local_count;
+    int upvalue_count;
     Local locals[MAX_LOCALS];
+    Upvalue upvalues[MAX_UPVALUES];
 };
 
 // forward declarations
@@ -160,7 +168,7 @@ static int emit_constant(Value value) {
 }
 
 static int emit_closure(Value value) {
-    assert(IS_CLOSURE(value));
+    assert(IS_FUNCTION(value));
     int index = current_chunk()->add_constant_value(value);
     if (index > MAX_INDEX) {
         parser.error("Too many constants in one chunk.");
@@ -168,6 +176,13 @@ static int emit_closure(Value value) {
     }
     current_chunk()->write_closure(index, parser.line());
     return index;
+}
+
+static void emit_upvalue_ref(int index, bool is_local, int line) {
+    // encode as 15-bit index, with high bit indicating local vs upvalue
+    uint16_t word = index;
+    if (is_local) word |= 0x8000;
+    emit_bytes(word & 0xFF, word >> 8, line);
 }
 
 static void emit_define_global(int constant, int line) {
@@ -188,6 +203,14 @@ static void emit_get_local(int index, int line) {
 
 static void emit_set_local(int index, int line) {
     current_chunk()->write_set_local(index, line);
+}
+
+static void emit_get_upvalue(int index, int line) {
+    current_chunk()->write_get_upvalue(index, line);
+}
+
+static void emit_set_upvalue(int index, int line) {
+    current_chunk()->write_set_upvalue(index, line);
 }
 
 static int emit_jump(uint8_t opcode, int line) {
@@ -277,12 +300,37 @@ static void define_local(int index) {
     local->depth = current->scope_depth;
 }
 
+// define an upvalue reference to a variable at given index
+// pass is_local true if it's in the immediately enclosing scope
+// checks for duplicates.  returns upvalue index
+static int define_upvalue(Compiler* compiler, int var_index, bool is_local) {
+    if (compiler->upvalue_count >= MAX_UPVALUES) {
+        parser.error("Too many closure variables in function.");
+        return -1;
+    }
+
+    // check if we've already defined an upvalue referring to this variable, and return its index
+    int upvalue_count = compiler->upvalue_count;
+    for (int i=0; i < upvalue_count; i++) {
+        Upvalue* upvalue = &compiler->upvalues[i];
+        if (upvalue->index == var_index && upvalue->is_local == is_local)
+            return i;
+    }
+
+    Upvalue* upvalue = &compiler->upvalues[upvalue_count];
+    upvalue->index = var_index;
+    upvalue->is_local = is_local;
+
+    compiler->upvalue_count++;
+    return upvalue_count;
+}
+
 // lookup a local variable by name
 // return a non-negative local index on success, and -1 if not found
 // produces error when attempting to resolve a declared but undefined variable.  still returns local index
-static int resolve_local(Token* name) {
-    for (int i = current->local_count - 1; i >= 0; i--) {
-        Local* local = &current->locals[i];
+static int resolve_local(Compiler* compiler, Token* name) {
+    for (int i = compiler->local_count - 1; i >= 0; i--) {
+        Local* local = &compiler->locals[i];
         if (identifiers_equal(&local->name, name)) {
             if (local->depth < 0) {
                 parser.error("Can't read local variable in its own initializer.");
@@ -290,6 +338,26 @@ static int resolve_local(Token* name) {
             return i;
         }
     }
+    return -1;
+}
+
+// recursively lookup an upvalue variable by name
+// return a non-negative upvalue index on success, and -1 if not found as available upvalue
+static int resolve_upvalue(Compiler* compiler, Token* name) {
+    if (compiler->parent == NULL) return -1;
+
+    // immediate parent scope
+    int index = resolve_local(compiler->parent, name);
+    if (index >= 0) {
+        return define_upvalue(compiler, index, true);  // references local
+    }
+
+    // recurse
+    index = resolve_upvalue(compiler->parent, name);
+    if (index >= 0) {
+        return define_upvalue(compiler, index, false); // intermedite upvalue
+    }
+
     return -1;
 }
 
@@ -412,8 +480,10 @@ static ObjFunction* end_compiler() {
     #endif
 
     ObjFunction* result = current->fn;
+    result->upvalue_count = current->upvalue_count;
 
     current = current->parent;
+
     return result;
 }
 
@@ -526,22 +596,37 @@ static void binary(bool _lvalue) {
 static void variable(bool lvalue) {
     int line = parser.line();
 
-    int index = resolve_local(&parser.previous);
-    if (index >= 0) {
+    // local
+    int local = resolve_local(current, &parser.previous);
+    if (local >= 0) {
         if (lvalue && parser.match(TOKEN_EQUAL)) {
             expression();
-            emit_set_local(index, line);
+            emit_set_local(local, line);
         } else {
-            emit_get_local(index, line);
+            emit_get_local(local, line);
         }
+        return;
+    }
+
+    // upvalue
+    int upvalue = resolve_upvalue(current, &parser.previous);
+    if (upvalue >= 0) {
+        if (lvalue && parser.match(TOKEN_EQUAL)) {
+            expression();
+            emit_set_upvalue(upvalue, line);
+        } else {
+            emit_get_upvalue(upvalue, line);
+        }
+        return;
+    }
+
+    // global
+    int constant = make_identifier_constant(&parser.previous);
+    if (lvalue && parser.match(TOKEN_EQUAL)) {
+        expression();
+        emit_set_global(constant, line);
     } else {
-        int constant = make_identifier_constant(&parser.previous);
-        if (lvalue && parser.match(TOKEN_EQUAL)) {
-            expression();
-            emit_set_global(constant, line);
-        } else {
-            emit_get_global(constant, line);
-        }
+        emit_get_global(constant, line);
     }
 }
 
@@ -908,6 +993,7 @@ static void function_helper(FunctionType type) {
             current->fn->arity++;
             int index = parse_variable("Expect parameter name.");
             if (index < 0) break;
+            define_local(index);
         } while (parser.match(TOKEN_COMMA));
     }
 
@@ -921,9 +1007,12 @@ static void function_helper(FunctionType type) {
 
     // only create closure when necessary
     if (fn->upvalue_count > 0) {
-        // closure with dedicated instruction
-        ObjClosure* closure = new_closure(compiling_vm, fn);
-        emit_closure(OBJ_VAL(closure));
+        // closure with dedicated instruction, followed by variable number of upvalue references
+        emit_closure(OBJ_VAL(fn));
+        int line = parser.line();
+        for (int i=0; i < fn->upvalue_count; i++) {
+            emit_upvalue_ref(compiler.upvalues[i].index, compiler.upvalues[i].is_local, line);
+        }
     } else {
         // function as constant
         emit_constant(OBJ_VAL(fn));

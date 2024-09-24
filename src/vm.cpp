@@ -139,6 +139,31 @@ inline void VM::pop_n(int n) {
     this->stack_top -= n;
 }
 
+inline ObjUpvalue* VM::capture_upvalue(int index) {
+    Value* value = &frame()->values[index];
+    ObjUpvalue* upvalue = new_upvalue(this, value);
+
+    return upvalue;
+}
+
+inline void VM::closure(Value fn) {
+    assert(IS_FUNCTION(fn));
+    ObjClosure* closure = new_closure(this, AS_FUNCTION(fn));
+    push(OBJ_VAL(closure));
+    for (int i=0; i < closure->upvalue_count; i++) {
+        int index = read_unsigned_16();
+        bool is_local = (index & 0x8000) != 0;
+        index &= 0x7FFF;
+        if (is_local) {
+            closure->upvalues[i] = capture_upvalue(index);
+        } else {
+            assert(frame()->closure != NULL);
+            closure->upvalues[i] = frame()->closure->upvalues[index];
+        }
+        assert(closure->upvalues[i] != NULL);
+    }
+}
+
 inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
     if (argc != fn->arity) {
         return runtime_error("Expected %d arguments but got %d.", fn->arity, argc);
@@ -252,6 +277,22 @@ inline InterpretResult VM::run() {
             break;
         }
 
+        case OP_CLOSURE: {
+            Value fn = read_constant();
+            closure(fn);
+            break;
+        }
+        case OP_CLOSURE_16: {
+            Value fn = read_constant_16();
+            closure(fn);
+            break;
+        }
+        case OP_CLOSURE_24: {
+            Value fn = read_constant_24();
+            closure(fn);
+            break;
+        }
+
         case OP_DEFINE_GLOBAL: {
             ObjString* name = AS_STRING(read_constant());
             globals.insert(name, peek(0));
@@ -353,6 +394,38 @@ inline InterpretResult VM::run() {
         case OP_SET_LOCAL_24: {
             int index = read_unsigned_24();
             frame()->values[index] = peek(0);
+            break;
+        }
+
+        case OP_GET_UPVALUE: {
+            int index = read_byte();
+            push(*frame()->closure->upvalues[index]->location);
+            break;
+        }
+        case OP_GET_UPVALUE_16: {
+            int index = read_unsigned_16();
+            push(*frame()->closure->upvalues[index]->location);
+            break;
+        }
+        case OP_GET_UPVALUE_24: {
+            int index = read_unsigned_24();
+            push(*frame()->closure->upvalues[index]->location);
+            break;
+        }
+
+        case OP_SET_UPVALUE: {
+            int index = read_byte();
+            *frame()->closure->upvalues[index]->location = peek(0);
+            break;
+        }
+        case OP_SET_UPVALUE_16: {
+            int index = read_unsigned_16();
+            *frame()->closure->upvalues[index]->location = peek(0);
+            break;
+        }
+        case OP_SET_UPVALUE_24: {
+            int index = read_unsigned_24();
+            *frame()->closure->upvalues[index]->location = peek(0);
             break;
         }
 

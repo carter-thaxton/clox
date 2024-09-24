@@ -3,6 +3,7 @@
 #include "chunk.h"
 #include "value.h"
 #include "table.h"
+#include <stdio.h>
 
 void print_chunk(Chunk* chunk, const char* name);
 int  print_instruction(Chunk* chunk, int offset);

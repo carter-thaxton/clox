@@ -62,6 +62,9 @@ private:
     Value pop();
     void pop_n(int n);
 
+    void closure(Value fn);
+    ObjUpvalue* capture_upvalue(int index);
+
     InterpretResult call_function(ObjFunction* fn, int argc);
     InterpretResult call_closure(ObjClosure* closure, int argc);
     InterpretResult call_value(Value callee, int argc);

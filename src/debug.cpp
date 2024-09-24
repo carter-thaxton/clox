@@ -66,17 +66,37 @@ static int print_signed_16_inst(const char* name, Chunk* chunk, int offset) {
     return offset + 3;
 }
 
-// TODO: print closures as more than constants
+static int print_upvalue_refs(Chunk* chunk, int constant, int offset) {
+    ObjFunction* fn = AS_FUNCTION(chunk->constants.values[constant]);
+    for (int i=0; i < fn->upvalue_count; i++) {
+        int index = chunk->code[offset++];
+        index |= chunk->code[offset++] << 8;
+        bool is_local = (index & 0x8000) != 0;
+        index &= 0x7FFF;
+        printf("%04d      |                     %s %d\n", offset - 2, is_local ? "local" : "upval", index);
+    }
+    return offset;
+}
+
 static int print_closure_inst(const char* name, Chunk* chunk, int offset) {
-    return print_constant_inst(name, chunk, offset);
+    int constant = chunk->code[offset + 1];
+    print_constant(name, chunk, constant);
+    return print_upvalue_refs(chunk, constant, offset + 2);
 }
 
 static int print_closure_16_inst(const char* name, Chunk* chunk, int offset) {
-    return print_constant_16_inst(name, chunk, offset);
+    int constant = chunk->code[offset + 1];
+    constant |= chunk->code[offset + 2] << 8;
+    print_constant(name, chunk, constant);
+    return print_upvalue_refs(chunk, constant, offset + 3);
 }
 
 static int print_closure_24_inst(const char* name, Chunk* chunk, int offset) {
-    return print_constant_24_inst(name, chunk, offset);
+    int constant = chunk->code[offset + 1];
+    constant |= chunk->code[offset + 2] << 8;
+    constant |= chunk->code[offset + 3] << 16;
+    print_constant(name, chunk, constant);
+    return print_upvalue_refs(chunk, constant, offset + 4);
 }
 
 void print_chunk(Chunk* chunk, const char* name) {
@@ -116,9 +136,9 @@ int print_instruction(Chunk* chunk, int offset) {
     case OP_CLOSURE:
         return print_closure_inst("OP_CLOSURE", chunk, offset);
     case OP_CLOSURE_16:
-        return print_closure_inst("OP_CLOSURE_16", chunk, offset);
+        return print_closure_16_inst("OP_CLOSURE_16", chunk, offset);
     case OP_CLOSURE_24:
-        return print_closure_inst("OP_CLOSURE_24", chunk, offset);
+        return print_closure_24_inst("OP_CLOSURE_24", chunk, offset);
 
     case OP_DEFINE_GLOBAL:
         return print_constant_inst("OP_DEFINE_GLOBAL", chunk, offset);

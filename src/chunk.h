@@ -81,6 +81,8 @@ struct Chunk {
     void write_set_global(int constant, int line);
     void write_get_local(int index, int line);
     void write_set_local(int index, int line);
+    void write_get_upvalue(int index, int line);
+    void write_set_upvalue(int index, int line);
 
     int add_constant_value(Value value);
 

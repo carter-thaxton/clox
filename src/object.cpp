@@ -114,7 +114,6 @@ ObjFunction* new_function(VM* vm) {
 
     result->name = NULL;
     result->arity = 0;
-    result->upvalue_count = 0;
     new (&result->chunk) Chunk();
 
     vm->register_object((Obj*) result);
@@ -144,6 +143,18 @@ ObjClosure* new_closure(VM* vm, ObjFunction* fn) {
     for (int i=0; i < fn->upvalue_count; i++) {
         result->upvalues[i] = NULL;
     }
+
+    vm->register_object((Obj*) result);
+
+    return result;
+}
+
+ObjUpvalue* new_upvalue(VM* vm, Value* value) {
+    ObjUpvalue* result = (ObjUpvalue*) alloc_object(sizeof(ObjUpvalue), OBJ_UPVALUE);
+
+    result->closed = NIL_VAL;
+    result->location = value;
+    result->next = NULL;
 
     vm->register_object((Obj*) result);
 

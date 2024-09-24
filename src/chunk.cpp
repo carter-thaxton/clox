@@ -94,6 +94,14 @@ void Chunk::write_set_local(int index, int line) {
     write_variable_length_opcode(this, OP_SET_LOCAL, index, line);
 }
 
+void Chunk::write_get_upvalue(int index, int line) {
+    write_variable_length_opcode(this, OP_GET_UPVALUE, index, line);
+}
+
+void Chunk::write_set_upvalue(int index, int line) {
+    write_variable_length_opcode(this, OP_SET_UPVALUE, index, line);
+}
+
 
 int Chunk::add_constant_value(Value value) {
     // check if value has already been added
