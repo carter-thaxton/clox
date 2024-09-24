@@ -65,6 +65,7 @@ enum OpCode {
     OP_JUMP_IF_FALSE,
     OP_JUMP_IF_TRUE,
     OP_CALL,
+    OP_CLOSE_UPVALUE,
 };
 
 struct Chunk {

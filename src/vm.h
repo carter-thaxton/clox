@@ -64,6 +64,7 @@ private:
 
     void closure(Value fn);
     ObjUpvalue* capture_upvalue(int index);
+    void close_upvalues(Value* value);
 
     InterpretResult call_function(ObjFunction* fn, int argc);
     InterpretResult call_closure(ObjClosure* closure, int argc);
@@ -75,6 +76,7 @@ private:
     int frame_count;
     Obj* objects;
     int object_count;
+    ObjUpvalue* open_upvalues;
     Table strings;
     Table globals;
     Value stack[STACK_MAX];

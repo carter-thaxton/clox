@@ -46,6 +46,7 @@ struct ParseRule {
 struct Local {
     Token name;
     int depth;
+    bool is_captured;
 };
 
 struct Upvalue {
@@ -287,6 +288,7 @@ static bool declare_local(Token* token) {
     Local* local = &current->locals[current->local_count++];
     local->name = *token;
     local->depth = -1;  // declare only - set to scope_depth later in define_local()
+    local->is_captured = false;
     return true;
 }
 
@@ -349,6 +351,7 @@ static int resolve_upvalue(Compiler* compiler, Token* name) {
     // immediate parent scope
     int index = resolve_local(compiler->parent, name);
     if (index >= 0) {
+        compiler->parent->locals[index].is_captured = true;
         return define_upvalue(compiler, index, true);  // references local
     }
 
@@ -410,22 +413,40 @@ static void begin_scope() {
 
 // emit OP_POP and OP_POPN instructions to pop locals to given scope depth
 // used to break out of loop, without actually updating scope_depth or local_count
-static int pop_scope_to(int scope_depth, int line) {
-    int locals_to_pop = 0;
+//
+// when capture_locals is true, emit OP_CLOSE_UPVALUE instead of OP_POP for locals
+// that have been marked with is_captured
+static int pop_scope_to(int scope_depth, int line, bool capture_locals) {
     int l = current->local_count;
+    int total_locals_to_pop = 0;
+    int locals_to_pop = 0;
+
     while (l > 0 && current->locals[l-1].depth > scope_depth) {
-        locals_to_pop++;
+        if (capture_locals && current->locals[l-1].is_captured) {
+            if (locals_to_pop > 0) {
+                emit_pop_count(locals_to_pop, line);
+                locals_to_pop = 0;
+            }
+            emit_byte(OP_CLOSE_UPVALUE, line);
+        } else {
+            locals_to_pop++;
+        }
+
+        total_locals_to_pop++;
         l--;
     }
 
-    emit_pop_count(locals_to_pop, line);
-    return locals_to_pop;
+    if (locals_to_pop > 0) {
+        emit_pop_count(locals_to_pop, line);
+    }
+
+    return total_locals_to_pop;
 }
 
 static void end_scope() {
     assert(current->scope_depth > 0);
     current->scope_depth--;
-    current->local_count -= pop_scope_to(current->scope_depth, parser.line());
+    current->local_count -= pop_scope_to(current->scope_depth, parser.line(), true);
 }
 
 
@@ -438,11 +459,12 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
 
     // define an initial local variable for the function itself
     Local* local = &compiler->locals[compiler->local_count++];
-    local->depth = 0;
     local->name.start = "";
     local->name.length = 0;
     local->name.line = 0;
     local->name.type = TOKEN_FUN;
+    local->depth = 0;
+    local->is_captured = false;
 
     switch (type) {
         case TYPE_FUNCTION: {
@@ -840,7 +862,7 @@ static void break_stmt(LoopContext* loop_ctx) {
         return parser.error("Too many break statements in one loop.");
 
     int line = parser.line();
-    pop_scope_to(loop_ctx->scope_depth, line);
+    pop_scope_to(loop_ctx->scope_depth, line, false);
 
     // jump to loop end, keeping track of jump to patch later
     int jump_exit = emit_jump(OP_JUMP, line);
@@ -854,7 +876,7 @@ static void continue_stmt(LoopContext* loop_ctx) {
         return parser.error("Can only continue within loop.");
 
     int line = parser.line();
-    pop_scope_to(loop_ctx->scope_depth, line);
+    pop_scope_to(loop_ctx->scope_depth, line, false);
 
     // loop back to start
     int jump_loop = emit_jump(OP_JUMP, line);

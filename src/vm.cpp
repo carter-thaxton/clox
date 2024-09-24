@@ -9,6 +9,7 @@
 
 VM::VM() {
     this->objects = NULL;
+    this->open_upvalues = NULL;
     reset_stack();
     define_globals(this);
 }
@@ -141,9 +142,29 @@ inline void VM::pop_n(int n) {
 
 inline ObjUpvalue* VM::capture_upvalue(int index) {
     Value* value = &frame()->values[index];
-    ObjUpvalue* upvalue = new_upvalue(this, value);
 
-    return upvalue;
+    // search to see if we have already created an upvalue for this variable
+    // uses the fact that upvalues references are sorted in order of the stack
+    ObjUpvalue* prev = NULL;
+    ObjUpvalue* upvalue = open_upvalues;
+    while (upvalue != NULL && upvalue->location > value) {  // TODO: avoid using pointer comparison
+        prev = upvalue;
+        upvalue = upvalue->next;
+    }
+    if (upvalue != NULL && upvalue->location == value) {
+        // already have an upvalue for this variable
+        return upvalue;
+    }
+
+    ObjUpvalue* created_upvalue = new_upvalue(this, value);
+    created_upvalue->next = upvalue;
+    if (prev != NULL) {
+        prev->next = created_upvalue;
+    } else {
+        open_upvalues = created_upvalue;
+    }
+
+    return created_upvalue;
 }
 
 inline void VM::closure(Value fn) {
@@ -161,6 +182,16 @@ inline void VM::closure(Value fn) {
             closure->upvalues[i] = frame()->closure->upvalues[index];
         }
         assert(closure->upvalues[i] != NULL);
+    }
+}
+
+inline void VM::close_upvalues(Value* last) {
+    while (open_upvalues != NULL && open_upvalues->location >= last) {
+        // create self-referential upvalue, so location points to value in closed
+        ObjUpvalue* upvalue = open_upvalues;
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed;
+        open_upvalues = upvalue->next;
     }
 }
 
@@ -518,6 +549,7 @@ inline InterpretResult VM::run() {
         case OP_RETURN: {
             Value result = pop();
             Value* frame_top = frame()->values;
+            close_upvalues(frame_top);
             frame_count--;
             if (frame_count <= 0) {
                 pop();  // pop main script fn
@@ -550,6 +582,11 @@ inline InterpretResult VM::run() {
             int arg_count = read_byte();
             InterpretResult result = call_value(peek(arg_count), arg_count);
             if (result != INTERPRET_OK) return result;
+            break;
+        }
+        case OP_CLOSE_UPVALUE: {
+            close_upvalues(stack_top - 1);
+            pop();
             break;
         }
 
