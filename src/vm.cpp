@@ -8,6 +8,7 @@
 #include <assert.h>
 
 VM::VM() {
+    this->debug_mode = false;
     this->objects = NULL;
     this->open_upvalues = NULL;
     reset_stack();
@@ -156,6 +157,9 @@ inline ObjUpvalue* VM::capture_upvalue(int index) {
         return upvalue;
     }
 
+    if (debug_mode) {
+        printf("          Creating upvalue: "); print_value(*value); printf("\n");
+    }
     ObjUpvalue* created_upvalue = new_upvalue(this, value);
     created_upvalue->next = upvalue;
     if (prev != NULL) {
@@ -189,6 +193,9 @@ inline void VM::close_upvalues(Value* last) {
     while (open_upvalues != NULL && open_upvalues->location >= last) {
         // create self-referential upvalue, so location points to value in closed
         ObjUpvalue* upvalue = open_upvalues;
+        if (debug_mode) {
+            printf("          Closing upvalue: "); print_value(*upvalue->location); printf("\n");
+        }
         upvalue->closed = *upvalue->location;
         upvalue->location = &upvalue->closed;
         open_upvalues = upvalue->next;
@@ -196,6 +203,8 @@ inline void VM::close_upvalues(Value* last) {
 }
 
 inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
+    assert(fn->upvalue_count == 0);
+
     if (argc != fn->arity) {
         return runtime_error("Expected %d arguments but got %d.", fn->arity, argc);
     }
@@ -253,13 +262,12 @@ inline InterpretResult VM::call_value(Value callee, int argc) {
 }
 
 inline InterpretResult VM::run() {
-    #ifdef DEBUG_TRACE_EXECUTION
-    printf("\n== trace ==\n");
-    #endif
+    if (debug_mode) {
+        printf("\n== trace ==\n");
+    }
 
     while (true)  {
-        #ifdef DEBUG_TRACE_EXECUTION
-        {
+        if (debug_mode) {
             // print stack
             printf("          ");
             for (Value* slot = this->stack; slot < this->stack_top; slot++) {
@@ -273,7 +281,6 @@ inline InterpretResult VM::run() {
             int offset = frame()->ip - chunk()->code;
             print_instruction(chunk(), offset);
         }
-        #endif
 
         uint8_t inst = read_byte();
 

@@ -32,6 +32,8 @@ public:
     void register_object(Obj* object);
 
     // for debugging
+    void set_debug_mode(bool debug) { this->debug_mode = debug; }
+    bool is_debug_mode() { return debug_mode; }
     int get_object_count() { return object_count; }
     int get_string_count() { return strings.get_count(); }
     int get_string_capacity() { return strings.get_capacity(); }
@@ -81,6 +83,7 @@ private:
     Table globals;
     Value stack[STACK_MAX];
     Value* stack_top;
+    bool debug_mode;
 
     friend Value string_value(VM* vm, const char* str, int length);
     friend Value concatenate_strings(VM* vm, Value a, Value b);

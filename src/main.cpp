@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -48,10 +49,14 @@ void debug(VM* vm, ObjFunction* fn) {
         const char* name = fn->name ? fn->name->chars : "<script>";
         print_chunk(chunk, name);
     }
+
+    // also toggle debug mode in VM
+    vm->set_debug_mode(!vm->is_debug_mode());
 }
 
-void repl() {
+void repl(bool debug_mode) {
     VM vm;
+    vm.set_debug_mode(debug_mode);
     ObjFunction* fn = NULL;
 
     while (true) {
@@ -104,8 +109,9 @@ char* read_file(const char* path) {
     return buffer;
 }
 
-void run_file(const char* path) {
+void run_file(const char* path, bool debug_mode) {
     VM vm;
+    vm.set_debug_mode(debug_mode);
 
     char *file = read_file(path);
     int result = interpret(&vm, file);
@@ -115,14 +121,30 @@ void run_file(const char* path) {
     if (result == INTERPRET_RUNTIME_ERROR) exit(EX_SOFTWARE);
 }
 
-int main(int argc, const char* argv[]) {
-    if (argc == 1) {
-        repl();
-    } else if (argc == 2) {
-        run_file(argv[1]);
+int usage(const char* arg) {
+    fprintf(stderr, "Usage: %s [-d] [path]\n", arg);
+    return EX_USAGE;
+}
+
+int main(int argc, char* argv[]) {
+    int c;
+    bool debug_mode = false;
+    while ((c = getopt(argc, argv, "d")) >= 01) {
+        switch (c) {
+        case 'd':
+            debug_mode = true;
+            break;
+        default:
+            return usage(argv[0]);
+        }
+    }
+
+    if (optind == argc) {
+        repl(debug_mode);
+    } else if (optind == argc - 1) {
+        run_file(argv[optind], debug_mode);
     } else {
-        fprintf(stderr, "Usage: %s [path]\n", argv[0]);
-        exit(EX_USAGE);
+        return usage(argv[0]);
     }
 
     return 0;

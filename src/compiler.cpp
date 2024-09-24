@@ -7,9 +7,7 @@
 #include <string.h>     // memcmp
 #include <assert.h>
 
-#ifdef DEBUG_PRINT_CODE
 #include "debug.h"
-#endif
 
 #define MAX_BREAK_STMTS     64
 #define MAX_LOCALS          2048    // architecture limits these to 32767
@@ -494,12 +492,10 @@ static ObjFunction* end_compiler() {
         emit_bytes(OP_NIL, OP_RETURN, parser.line());
     }
 
-    #ifdef DEBUG_PRINT_CODE
-    if (!parser.had_error()) {
+    if (compiling_vm->is_debug_mode() && !parser.had_error()) {
         const char* name = current->fn->name ? current->fn->name->chars : "<script>";
         print_chunk(current_chunk(), name);
     }
-    #endif
 
     ObjFunction* result = current->fn;
     result->upvalue_count = current->upvalue_count;
