@@ -28,15 +28,15 @@ InterpretResult VM::interpret(ObjFunction* main_fn) {
     return run();
 }
 
+void VM::reset_stack() {
+    this->stack_top = this->stack;
+    this->frame_count = 0;
+}
+
 void VM::register_object(Obj* object) {
     object->next = this->objects;
     this->objects = object;
     this->object_count++;
-}
-
-void VM::reset_stack() {
-    this->stack_top = this->stack;
-    this->frame_count = 0;
 }
 
 void VM::free_objects() {

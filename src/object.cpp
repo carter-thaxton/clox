@@ -72,8 +72,8 @@ Value string_value(VM* vm, const char* str, int length) {
     result->hash = hash;
 
     // keep track of string for interning and garbage collection
-    vm->strings.insert(result, NIL_VAL);
     vm->register_object((Obj*) result);
+    vm->strings.insert(result, NIL_VAL);
 
     return OBJ_VAL(result);
 }
@@ -103,8 +103,8 @@ Value concatenate_strings(VM* vm, Value a, Value b) {
     }
 
     // keep track of string for interning and garbage collection
-    vm->strings.insert(result, NIL_VAL);
     vm->register_object((Obj*) result);
+    vm->strings.insert(result, NIL_VAL);
 
     return OBJ_VAL(result);
 }
@@ -124,10 +124,10 @@ ObjFunction* new_function(VM* vm) {
 Value define_native(VM* vm, const char* name, NativeFn fn) {
     ObjNative* fn_obj = (ObjNative*) alloc_object(sizeof(ObjNative), OBJ_NATIVE);
     fn_obj->native_fn = fn;
-    Value fn_val = OBJ_VAL(fn_obj);
-
-    Value name_val = string_value(vm, name, strlen(name));
     vm->register_object((Obj*) fn_obj);
+
+    Value fn_val = OBJ_VAL(fn_obj);
+    Value name_val = string_value(vm, name, strlen(name));
     vm->globals.insert(AS_STRING(name_val), fn_val);
 
     // push/pop for GC?
