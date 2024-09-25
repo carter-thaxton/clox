@@ -1,4 +1,5 @@
 #include "value.h"
+#include "object.h"
 #include "memory.h"
 
 ValueArray::ValueArray() {
@@ -27,6 +28,12 @@ void ValueArray::write(Value value) {
     this->length++;
 }
 
+void ValueArray::mark_objects() {
+    for (int i=0; i < length; i++) {
+        mark_value(values[i]);
+    }
+}
+
 bool values_equal(Value a, Value b) {
     if (a.type != b.type) return false;
     switch (a.type) {
@@ -36,4 +43,10 @@ bool values_equal(Value a, Value b) {
         case VAL_OBJ: return AS_OBJ(a) == AS_OBJ(b);
     }
     return false;
+}
+
+void mark_value(Value value) {
+    if (IS_OBJ(value)) {
+        mark_object(AS_OBJ(value));
+    }
 }

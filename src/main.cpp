@@ -19,13 +19,6 @@
 #define EX_IOERR    (74)    // I/O error
 
 
-InterpretResult interpret(VM* vm, const char* src) {
-    ObjFunction* fn = compile(src, vm);
-    if (!fn) return INTERPRET_COMPILE_ERROR;
-
-    return vm->interpret(fn);
-}
-
 void debug(VM* vm, ObjFunction* fn) {
     printf("VM objects: %d\tstrings: %d / %d\n",
         vm->get_object_count(),
@@ -50,8 +43,7 @@ void debug(VM* vm, ObjFunction* fn) {
         print_chunk(chunk, name);
     }
 
-    // also toggle debug mode in VM
-    vm->set_debug_mode(!vm->is_debug_mode());
+    printf("\n");
 }
 
 void repl(bool debug_mode) {
@@ -69,6 +61,17 @@ void repl(bool debug_mode) {
             // handle some commands at repl
             if (strcmp(line, "debug") == 0) {
                 debug(&vm, fn);
+            } else if (strcmp(line, "tron") == 0) {
+                vm.set_debug_mode(true);
+            } else if (strcmp(line, "troff") == 0) {
+                vm.set_debug_mode(false);
+            } else if (strcmp(line, "gc") == 0) {
+                fn = NULL;
+                vm.gc();
+                debug(&vm, fn);
+            } else if (strcmp(line, "clear") == 0) {
+                fn = NULL;
+                vm.clear_globals();
             } else {
                 fn = compile(line, &vm);
                 if (fn) {
@@ -79,6 +82,13 @@ void repl(bool debug_mode) {
 
         free(line);
     }
+}
+
+InterpretResult interpret(VM* vm, const char* src) {
+    ObjFunction* fn = compile(src, vm);
+    if (!fn) return INTERPRET_COMPILE_ERROR;
+
+    return vm->interpret(fn);
 }
 
 char* read_file(const char* path) {

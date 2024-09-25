@@ -19,6 +19,7 @@ enum ObjType {
 struct Obj {
     ObjType type;
     Obj* next;
+    bool marked;
 };
 
 struct ObjString {
@@ -83,6 +84,7 @@ inline static bool is_obj_type(Value value, ObjType type) {
 
 Obj* alloc_object(size_t size, ObjType type);
 void free_object(Obj* object);
+void mark_object(Obj* object);
 
 Value string_value(VM* vm, const char* str, int length);
 Value concatenate_strings(VM* vm, Value a, Value b);

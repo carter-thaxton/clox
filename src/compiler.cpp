@@ -1069,3 +1069,11 @@ ObjFunction* compile(const char* src, VM* vm) {
 
     return ok ? result : NULL;
 }
+
+void mark_compiler_roots() {
+    Compiler* compiler = current;
+    while (compiler) {
+        mark_object((Obj*) compiler->fn);
+        compiler = compiler->parent;
+    }
+}

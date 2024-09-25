@@ -1,6 +1,7 @@
 #include "object.h"
 #include "memory.h"
 #include "vm.h"
+#include "debug.h"
 #include <string.h>
 #include <new>
 #include <assert.h>
@@ -9,6 +10,7 @@ Obj* alloc_object(size_t size, ObjType type) {
     Obj* object = (Obj*) reallocate(NULL, 0, size);
     object->type = type;
     object->next = NULL;  // will be set when registered with VM
+    object->marked = false;
     return object;
 }
 
@@ -159,4 +161,44 @@ ObjUpvalue* new_upvalue(VM* vm, Value* value) {
     vm->register_object((Obj*) result);
 
     return result;
+}
+
+void mark_object(Obj* object) {
+    assert(object != NULL);
+    if (object->marked) return;
+
+    #ifdef DEBUG_LOG_GC
+    printf("%p mark ", (void*) object);
+    print_value(OBJ_VAL(object));
+    printf("\n");
+    #endif
+
+    object->marked = true;
+
+    switch (object->type) {
+        case OBJ_STRING:
+        case OBJ_NATIVE:
+            break;
+
+        case OBJ_FUNCTION: {
+            ObjFunction* fn = (ObjFunction*) object;
+            mark_object((Obj*) fn->name);
+            fn->chunk.constants.mark_objects();
+            break;
+        }
+        case OBJ_UPVALUE: {
+            ObjUpvalue* upvalue = (ObjUpvalue*) object;
+            mark_value(upvalue->closed);
+            // don't follow list of open upvalues - VM will do that
+            break;
+        }
+        case OBJ_CLOSURE: {
+            ObjClosure* closure = (ObjClosure*) object;
+            mark_object((Obj*) closure->fn);
+            for (int i=0; i < closure->upvalue_count; i++) {
+                mark_object((Obj*) closure->upvalues[i]);
+            }
+            break;
+        }
+    }
 }

@@ -33,7 +33,32 @@ void VM::reset_stack() {
     this->frame_count = 0;
 }
 
+void VM::clear_globals() {
+    this->globals.clear();
+    define_globals(this);
+}
+
+void VM::gc() {
+    #ifdef DEBUG_LOG_GC
+    printf("-- gc begin\n");
+    #endif
+
+    mark_objects();
+    strings.remove_unmarked_strings();
+    sweep_objects();
+
+    #ifdef DEBUG_LOG_GC
+    printf("-- gc end\n");
+    #endif
+}
+
 void VM::register_object(Obj* object) {
+    #ifdef DEBUG_LOG_GC
+    printf("%p alloc ", (void*) object);
+    print_value(OBJ_VAL(object));
+    printf("\n");
+    #endif
+
     object->next = this->objects;
     this->objects = object;
     this->object_count++;
@@ -49,6 +74,64 @@ void VM::free_objects() {
     }
     this->objects = NULL;
     assert(object_count == 0);
+}
+
+void VM::mark_objects() {
+    // stack
+    for (Value* value = stack; value != stack_top; value++) {
+        if (IS_OBJ(*value)) {
+            mark_object(AS_OBJ(*value));
+        }
+    }
+
+    // frames
+    for (int i=0; i < frame_count; i++) {
+        CallFrame* f = &frames[i];
+
+        // closure recurses to function, so no need to mark both
+        if (f->closure) {
+            mark_object((Obj*) f->closure);
+        } else {
+            mark_object((Obj*) f->fn);
+        }
+    }
+
+    // upvalues
+    for (ObjUpvalue* upvalue = open_upvalues; upvalue != NULL; upvalue = upvalue->next) {
+        mark_object((Obj*) upvalue);
+    }
+
+    // globals
+    globals.mark_objects();
+}
+
+void VM::sweep_objects() {
+    Obj* prev = NULL;
+    Obj* object = this->objects;
+    while (object) {
+        if (object->marked) {
+            object->marked = false;
+            prev = object;
+            object = object->next;
+        } else {
+            Obj* unreached = object;
+            object = object->next;
+            if (prev) {
+                prev->next = object;
+            } else {
+                this->objects = object;
+            }
+
+            #ifdef DEBUG_LOG_GC
+            printf("%p free ", (void*) unreached);
+            print_value(OBJ_VAL(unreached));
+            printf("\n");
+            #endif
+
+            free_object(unreached);
+            object_count--;
+        }
+    }
 }
 
 InterpretResult VM::runtime_error(const char* format, ...) {

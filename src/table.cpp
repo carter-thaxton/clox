@@ -12,7 +12,13 @@ Table::Table() {
 }
 
 Table::~Table() {
-    FREE_ARRAY(Entry, this->entries, this->capacity);
+    clear();
+}
+
+void Table::clear() {
+    if (this->entries) {
+        FREE_ARRAY(Entry, this->entries, this->capacity);
+    }
 
     this->entries = NULL;
     this->capacity = 0;
@@ -103,6 +109,10 @@ bool Table::remove(ObjString* key) {
     if (this->count == 0) return false;
 
     Entry* entry = find_entry_helper(this->entries, this->capacity, key);
+    return remove_entry(entry);
+}
+
+bool Table::remove_entry(Entry* entry) {
     if (entry->key == NULL) return false;
 
     // replace with tombstone
@@ -165,5 +175,24 @@ ObjString* Table::find_string(const char* str, int length, uint32_t hash) {
         }
 
         index = (index + 1) % capacity;
+    }
+}
+
+void Table::mark_objects() {
+    for (int i=0; i < capacity; i++) {
+        Entry* entry = &entries[i];
+        if (entry->key) {
+            mark_object((Obj*) entry->key);
+        }
+        mark_value(entry->value);
+    }
+}
+
+void Table::remove_unmarked_strings() {
+    for (int i=0; i < capacity; i++) {
+        Entry* entry = &entries[i];
+        if (entry->key && !entry->key->obj.marked) {
+            remove_entry(entry);
+        }
     }
 }

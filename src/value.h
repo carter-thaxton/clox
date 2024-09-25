@@ -25,6 +25,7 @@ struct ValueArray {
     ~ValueArray();
 
     void write(Value value);
+    void mark_objects();
 
     Value* values;
     int capacity;
@@ -58,3 +59,4 @@ inline static bool is_truthy(Value value) {
 }
 
 bool values_equal(Value a, Value b);
+void mark_value(Value value);

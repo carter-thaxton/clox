@@ -30,6 +30,7 @@ public:
     InterpretResult interpret(ObjFunction* main_fn);
 
     void register_object(Obj* object);
+    void gc();
 
     // for debugging
     void set_debug_mode(bool debug) { this->debug_mode = debug; }
@@ -39,10 +40,13 @@ public:
     int get_string_capacity() { return strings.get_capacity(); }
     Table* get_strings() { return &strings; }
     Table* get_globals() { return &globals; }
+    void clear_globals();
 
 private:
     void reset_stack();
     void free_objects();
+    void mark_objects();
+    void sweep_objects();
 
     InterpretResult runtime_error(const char* format, ...);
 
