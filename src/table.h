@@ -41,4 +41,5 @@ private:
     int count_with_tombstones;
 
     friend void print_table(Table* table);
+    friend void print_strings(Table* table);
 };

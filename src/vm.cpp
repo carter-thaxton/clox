@@ -22,11 +22,13 @@ VM::VM() {
     this->gc_object_threshold = GC_INIT_THRESHOLD;
     this->objects = NULL;
     this->open_upvalues = NULL;
-    reset_stack();
-    define_globals(this);
+    this->init_string = NULL;
+    clear();
 }
 
 VM::~VM() {
+    this->init_string = NULL;
+    reset_stack();
     free_all_objects();
 }
 
@@ -44,9 +46,11 @@ void VM::reset_stack() {
     this->frame_count = 0;
 }
 
-void VM::clear_globals() {
+void VM::clear() {
+    reset_stack();
     this->globals.clear();
     define_globals(this);
+    this->init_string = AS_STRING(string_value(this, "init", 4));
 }
 
 void VM::gc() {
@@ -124,6 +128,9 @@ void VM::mark_objects() {
 
     // globals
     globals.mark_objects();
+
+    // strings
+    mark_object((Obj*) init_string);
 }
 
 int VM::sweep_objects() {
@@ -408,6 +415,14 @@ inline InterpretResult VM::call_closure(ObjClosure* closure, int argc) {
 inline InterpretResult VM::call_class(ObjClass* klass, int argc) {
     Value* location = stack_top - argc - 1;  // include args and the fn itself
     *location = OBJ_VAL(new_instance(this, klass));
+
+    Value initializer;
+    if (klass->methods.get(init_string, &initializer)) {
+        return call_value(initializer, argc);
+    } else if (argc != 0) {
+        return runtime_error("Expected %d arguments but got %d.", 0, argc);
+    }
+
     return INTERPRET_OK;
 }
 

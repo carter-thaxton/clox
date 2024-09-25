@@ -11,3 +11,4 @@ void print_value(Value value);
 void print_value_array(ValueArray* array);
 void print_object(Obj* object);
 void print_table(Table* table);
+void print_strings(Table* table);

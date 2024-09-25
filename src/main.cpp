@@ -30,7 +30,7 @@ void debug(VM* vm, ObjFunction* fn) {
     printf("\n");
 
     printf("strings:\n");
-    print_table(vm->get_strings());
+    print_strings(vm->get_strings());
     printf("\n");
 
     if (fn) {
@@ -71,7 +71,7 @@ void repl(bool debug_mode) {
                 debug(&vm, fn);
             } else if (strcmp(line, "clear") == 0) {
                 fn = NULL;
-                vm.clear_globals();
+                vm.clear();
             } else {
                 fn = compile(line, &vm);
                 if (fn) {

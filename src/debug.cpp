@@ -354,3 +354,15 @@ void print_table(Table* table) {
         printf("\n");
     }
 }
+
+void print_strings(Table* table) {
+    for (int i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+        if (entry->key == NULL) continue;  // also skip tombstones
+
+        printf("  %s", entry->key->chars);
+        if (i % 32 == 31) {
+            printf("\n");
+        }
+    }
+}

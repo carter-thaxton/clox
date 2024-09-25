@@ -40,7 +40,7 @@ public:
     int get_string_capacity() { return strings.get_capacity(); }
     Table* get_strings() { return &strings; }
     Table* get_globals() { return &globals; }
-    void clear_globals();
+    void clear();
 
 private:
     void reset_stack();
@@ -95,6 +95,7 @@ private:
     Value stack[STACK_MAX];
     Value* stack_top;
     bool debug_mode;
+    ObjString* init_string;
 
     friend Value string_value(VM* vm, const char* str, int length);
     friend Value concatenate_strings(VM* vm, Value a, Value b);

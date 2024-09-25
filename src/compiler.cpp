@@ -32,6 +32,7 @@ enum FunctionType {
     TYPE_ANONYMOUS,
     TYPE_FUNCTION,
     TYPE_METHOD,
+    TYPE_INITIALIZER,
 };
 
 typedef void (*ParseFn)(bool lvalue);
@@ -277,6 +278,21 @@ static void emit_pop_count(int count, int line) {
     }
 }
 
+static void emit_return(int line) {
+    bool prev_return = current_chunk()->length > 0 && current_chunk()->read_back(0) == OP_RETURN;
+
+    if (current->type == TYPE_INITIALIZER) {
+        // always return 'this' from initializer, stored as local 0
+        emit_bytes(OP_GET_LOCAL, 0, line);
+        emit_byte(OP_RETURN, line);
+    } else if (prev_return) {
+        // optimized away - previous instruction was already an explicit return
+    } else {
+        // return nil
+        emit_bytes(OP_NIL, OP_RETURN, line);
+    }
+}
+
 // create and register a string object, and add string as a constant value to chunk
 // return the constant index, or -1 on failure
 static int make_identifier_constant(Token* token) {
@@ -483,7 +499,7 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
 
     // reserve an initial local variable for 'this' or the function itself
     Local* local = &compiler->locals[compiler->local_count++];
-    if (type == TYPE_METHOD) {
+    if (type == TYPE_METHOD || type == TYPE_INITIALIZER) {
         local->name.start = "this";
         local->name.length = 4;
         local->name.type = TOKEN_THIS;
@@ -517,11 +533,7 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
 }
 
 static ObjFunction* end_compiler() {
-    // emit return nil, unless previous instruction was already an explicit return
-    bool prev_return = current_chunk()->length > 0 && current_chunk()->read_back(0) == OP_RETURN;
-    if (!prev_return) {
-        emit_bytes(OP_NIL, OP_RETURN, parser.line());
-    }
+    emit_return(parser.line());
 
     if (compiling_vm->is_debug_mode() && !parser.had_error()) {
         const char* name = current->fn->name ? current->fn->name->chars : "<script>";
@@ -907,8 +919,11 @@ static void return_stmt(LoopContext* loop_ctx) {
 
     int line = parser.line();
     if (parser.match(TOKEN_SEMICOLON)) {
-        emit_bytes(OP_NIL, OP_RETURN, line);
+        emit_return(line);
     } else {
+        if (current->type == TYPE_INITIALIZER) {
+            return parser.error("Can't return a value from an initializer.");
+        }
         expression();
         parser.consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
         emit_byte(OP_RETURN, line);
@@ -956,7 +971,8 @@ static void method() {
     parser.consume(TOKEN_IDENTIFIER, "Expect method name.");
     int name_constant = make_identifier_constant(&parser.previous);
 
-    function_helper(TYPE_METHOD);   // TODO: handle constructor
+    bool is_init = (parser.previous.length == 4 && memcmp(parser.previous.start, "init", 4) == 0);
+    function_helper(is_init ? TYPE_INITIALIZER : TYPE_METHOD);
 
     emit_method(name_constant, line);
 }
@@ -1108,6 +1124,7 @@ static void function_helper(FunctionType type) {
             msg = "Expect '(' after function name.";
             break;
         case TYPE_METHOD:
+        case TYPE_INITIALIZER:
             msg = "Expect '(' after method name.";
             break;
     }
