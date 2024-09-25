@@ -320,6 +320,55 @@ inline void VM::close_upvalues(Value* last) {
     }
 }
 
+inline void VM::define_method(ObjString* name) {
+    Value method = peek(0);
+    assert(IS_CLASS(peek(1)));
+    ObjClass* klass = AS_CLASS(peek(1));
+    klass->methods.insert(name, method);
+    pop();
+}
+
+inline bool VM::bind_method(ObjClass* klass, ObjString* name) {
+    Value method;
+    if (!klass->methods.get(name, &method)) {
+        return false;
+    }
+
+    ObjBoundMethod* bound = new_bound_method(this, peek(0), method);
+    pop();
+    push(OBJ_VAL(bound));
+    return true;
+}
+
+inline InterpretResult VM::get_property(ObjString* name) {
+    if (!IS_INSTANCE(peek(0))) {
+        return runtime_error("Only instances have properties.");
+    }
+    ObjInstance* instance = AS_INSTANCE(peek(0));
+    Value val;
+    if (instance->fields.get(name, &val)) {
+        pop(); // instance
+        push(val);
+    } else if (bind_method(instance->klass, name)) {
+        // success
+    } else {
+        return runtime_error("Undefined property '%s'.", name->chars);
+    }
+    return INTERPRET_OK;
+}
+
+inline InterpretResult VM::set_property(ObjString* name) {
+    if (!IS_INSTANCE(peek(1))) {
+        return runtime_error("Only instances have fields.");
+    }
+    ObjInstance* instance = AS_INSTANCE(peek(1));
+    instance->fields.insert(name, peek(0));
+    Value val = pop();
+    pop(); // instance
+    push(val);
+    return INTERPRET_OK;
+}
+
 inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
     assert(fn->upvalue_count == 0);
 
@@ -362,6 +411,12 @@ inline InterpretResult VM::call_class(ObjClass* klass, int argc) {
     return INTERPRET_OK;
 }
 
+inline InterpretResult VM::call_bound_method(ObjBoundMethod* bound, int argc) {
+    Value* location = stack_top - argc - 1;  // include args and the fn itself
+    *location = bound->receiver;
+    return call_value(bound->method, argc);
+}
+
 inline InterpretResult VM::call_value(Value callee, int argc) {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
@@ -380,6 +435,9 @@ inline InterpretResult VM::call_value(Value callee, int argc) {
         }
         case OBJ_CLASS: {
             return call_class(AS_CLASS(callee), argc);
+        }
+        case OBJ_BOUND_METHOD: {
+            return call_bound_method(AS_BOUND_METHOD(callee), argc);
         }
         default:
             ; // not callable
@@ -455,6 +513,22 @@ inline InterpretResult VM::run() {
         case OP_CLASS_24: {
             ObjString* name = AS_STRING(read_constant(3));
             push(OBJ_VAL(new_class(this, name)));
+            break;
+        }
+
+        case OP_METHOD: {
+            ObjString* name = AS_STRING(read_constant(1));
+            define_method(name);
+            break;
+        }
+        case OP_METHOD_16: {
+            ObjString* name = AS_STRING(read_constant(2));
+            define_method(name);
+            break;
+        }
+        case OP_METHOD_24: {
+            ObjString* name = AS_STRING(read_constant(3));
+            define_method(name);
             break;
         }
 
@@ -612,84 +686,39 @@ inline InterpretResult VM::run() {
 
         case OP_GET_PROPERTY: {
             ObjString* name = AS_STRING(read_constant(1));
-            if (!IS_INSTANCE(peek(0))) {
-                return runtime_error("Only instances have properties.");
-            }
-            ObjInstance* instance = AS_INSTANCE(peek(0));
-            Value val;
-            if (instance->fields.get(name, &val)) {
-                pop(); // instance
-                push(val);
-            } else {
-                return runtime_error("Undefined property '%s'.", name->chars);
-            }
+            InterpretResult result = get_property(name);
+            if (result != INTERPRET_OK) return result;
             break;
         }
         case OP_GET_PROPERTY_16: {
             ObjString* name = AS_STRING(read_constant(2));
-            if (!IS_INSTANCE(peek(0))) {
-                return runtime_error("Only instances have properties.");
-            }
-            ObjInstance* instance = AS_INSTANCE(peek(0));
-            Value val;
-            if (instance->fields.get(name, &val)) {
-                pop(); // instance
-                push(val);
-            } else {
-                return runtime_error("Undefined property '%s'.", name->chars);
-            }
+            InterpretResult result = get_property(name);
+            if (result != INTERPRET_OK) return result;
             break;
         }
         case OP_GET_PROPERTY_24: {
             ObjString* name = AS_STRING(read_constant(3));
-            if (!IS_INSTANCE(peek(0))) {
-                return runtime_error("Only instances have properties.");
-            }
-            ObjInstance* instance = AS_INSTANCE(peek(0));
-            Value val;
-            if (instance->fields.get(name, &val)) {
-                pop(); // instance
-                push(val);
-            } else {
-                return runtime_error("Undefined property '%s'.", name->chars);
-            }
+            InterpretResult result = get_property(name);
+            if (result != INTERPRET_OK) return result;
             break;
         }
 
         case OP_SET_PROPERTY: {
             ObjString* name = AS_STRING(read_constant(1));
-            if (!IS_INSTANCE(peek(1))) {
-                return runtime_error("Only instances have fields.");
-            }
-            ObjInstance* instance = AS_INSTANCE(peek(1));
-            instance->fields.insert(name, peek(0));
-            Value val = pop();
-            pop(); // instance
-            push(val);
+            InterpretResult result = set_property(name);
+            if (result != INTERPRET_OK) return result;
             break;
         }
         case OP_SET_PROPERTY_16: {
             ObjString* name = AS_STRING(read_constant(2));
-            if (!IS_INSTANCE(peek(1))) {
-                return runtime_error("Only instances have fields.");
-            }
-            ObjInstance* instance = AS_INSTANCE(peek(1));
-            instance->fields.insert(name, peek(0));
-            Value val = pop();
-            pop(); // instance
-            push(val);
+            InterpretResult result = set_property(name);
+            if (result != INTERPRET_OK) return result;
             break;
         }
         case OP_SET_PROPERTY_24: {
             ObjString* name = AS_STRING(read_constant(3));
-            if (!IS_INSTANCE(peek(1))) {
-                return runtime_error("Only instances have fields.");
-            }
-            ObjInstance* instance = AS_INSTANCE(peek(1));
-            instance->fields.insert(name, peek(0));
-            Value val = pop();
-            pop(); // instance
-            push(val);
+            InterpretResult result = set_property(name);
+            if (result != INTERPRET_OK) return result;
             break;
         }
 

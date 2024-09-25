@@ -17,6 +17,7 @@ enum ObjType {
     OBJ_CLOSURE,
     OBJ_CLASS,
     OBJ_INSTANCE,
+    OBJ_BOUND_METHOD,
 };
 
 struct Obj {
@@ -62,6 +63,7 @@ struct ObjClosure {
 struct ObjClass {
     Obj obj;
     ObjString* name;
+    Table methods;
 };
 
 struct ObjInstance {
@@ -70,31 +72,40 @@ struct ObjInstance {
     Table fields;
 };
 
-#define OBJ_TYPE(value)     (AS_OBJ(value)->type)
+struct ObjBoundMethod {
+    Obj obj;
+    Value receiver;
+    Value method;  // function or closure
+};
 
-#define IS_STRING(value)    (is_obj_type(value, OBJ_STRING))
-#define AS_STRING(value)    ((ObjString*) AS_OBJ(value))
-#define AS_CSTRING(value)   (AS_STRING(value)->chars)
+#define OBJ_TYPE(value)         (AS_OBJ(value)->type)
 
-#define IS_FUNCTION(value)  (is_obj_type(value, OBJ_FUNCTION))
-#define AS_FUNCTION(value)  ((ObjFunction*) AS_OBJ(value))
+#define IS_STRING(value)        (is_obj_type(value, OBJ_STRING))
+#define AS_STRING(value)        ((ObjString*) AS_OBJ(value))
+#define AS_CSTRING(value)       (AS_STRING(value)->chars)
 
-#define IS_NATIVE(value)    (is_obj_type(value, OBJ_NATIVE))
-#define AS_NATIVE(value)    ((ObjNative*) AS_OBJ(value))
+#define IS_FUNCTION(value)      (is_obj_type(value, OBJ_FUNCTION))
+#define AS_FUNCTION(value)      ((ObjFunction*) AS_OBJ(value))
 
-#define IS_UPVALUE(value)   (is_obj_type(value, OBJ_UPVALUE))
-#define AS_UPVALUE(value)   ((ObjUpvalue*) AS_OBJ(value))
+#define IS_NATIVE(value)        (is_obj_type(value, OBJ_NATIVE))
+#define AS_NATIVE(value)        ((ObjNative*) AS_OBJ(value))
 
-#define IS_CLOSURE(value)   (is_obj_type(value, OBJ_CLOSURE))
-#define AS_CLOSURE(value)   ((ObjClosure*) AS_OBJ(value))
+#define IS_UPVALUE(value)       (is_obj_type(value, OBJ_UPVALUE))
+#define AS_UPVALUE(value)       ((ObjUpvalue*) AS_OBJ(value))
 
-#define IS_CLASS(value)     (is_obj_type(value, OBJ_CLASS))
-#define AS_CLASS(value)     ((ObjClass*) AS_OBJ(value))
+#define IS_CLOSURE(value)       (is_obj_type(value, OBJ_CLOSURE))
+#define AS_CLOSURE(value)       ((ObjClosure*) AS_OBJ(value))
 
-#define IS_INSTANCE(value)  (is_obj_type(value, OBJ_INSTANCE))
-#define AS_INSTANCE(value)  ((ObjInstance*) AS_OBJ(value))
+#define IS_CLASS(value)         (is_obj_type(value, OBJ_CLASS))
+#define AS_CLASS(value)         ((ObjClass*) AS_OBJ(value))
 
-#define STRING_MAX_LEN      0x7FFFFF00
+#define IS_INSTANCE(value)      (is_obj_type(value, OBJ_INSTANCE))
+#define AS_INSTANCE(value)      ((ObjInstance*) AS_OBJ(value))
+
+#define IS_BOUND_METHOD(value)  (is_obj_type(value, OBJ_BOUND_METHOD))
+#define AS_BOUND_METHOD(value)  ((ObjBoundMethod*) AS_OBJ(value))
+
+#define STRING_MAX_LEN          0x7FFFFF00
 
 
 // inlined for fast-path
@@ -116,3 +127,4 @@ ObjClosure* new_closure(VM* vm, ObjFunction* fn);
 ObjUpvalue* new_upvalue(VM* vm, Value* value);
 ObjClass* new_class(VM* vm, ObjString* name);
 ObjInstance* new_instance(VM* vm, ObjClass* klass);
+ObjBoundMethod* new_bound_method(VM* vm, Value receiver, Value method);

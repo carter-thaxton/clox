@@ -46,6 +46,7 @@ void free_object(Obj* object) {
         }
         case OBJ_CLASS: {
             ObjClass* klass = (ObjClass*) object;
+            klass->methods.~Table();
             FREE(ObjClass, klass);
             break;
         }
@@ -53,6 +54,70 @@ void free_object(Obj* object) {
             ObjInstance* instance = (ObjInstance*) object;
             instance->fields.~Table();
             FREE(ObjInstance, instance);
+            break;
+        }
+        case OBJ_BOUND_METHOD: {
+            ObjBoundMethod* bound = (ObjBoundMethod*) object;
+            FREE(ObjBoundMethod, bound);
+            break;
+        }
+    }
+}
+
+void mark_object(Obj* object) {
+    if (object == NULL) return;
+    // assert(object != NULL);
+    if (object->marked) return;
+
+    #ifdef DEBUG_LOG_GC
+    printf("%p mark ", (void*) object);
+    print_value(OBJ_VAL(object));
+    printf("\n");
+    #endif
+
+    object->marked = true;
+
+    switch (object->type) {
+        case OBJ_STRING:
+        case OBJ_NATIVE:
+            break;
+
+        case OBJ_FUNCTION: {
+            ObjFunction* fn = (ObjFunction*) object;
+            mark_object((Obj*) fn->name);
+            fn->chunk.constants.mark_objects();
+            break;
+        }
+        case OBJ_UPVALUE: {
+            ObjUpvalue* upvalue = (ObjUpvalue*) object;
+            mark_value(upvalue->closed);
+            // don't follow list of open upvalues - VM will do that
+            break;
+        }
+        case OBJ_CLOSURE: {
+            ObjClosure* closure = (ObjClosure*) object;
+            mark_object((Obj*) closure->fn);
+            for (int i=0; i < closure->upvalue_count; i++) {
+                mark_object((Obj*) closure->upvalues[i]);
+            }
+            break;
+        }
+        case OBJ_CLASS: {
+            ObjClass* klass = (ObjClass*) object;
+            mark_object((Obj*) klass->name);
+            klass->methods.mark_objects();
+            break;
+        }
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = (ObjInstance*) object;
+            mark_object((Obj*) instance->klass);
+            instance->fields.mark_objects();
+            break;
+        }
+        case OBJ_BOUND_METHOD: {
+            ObjBoundMethod* bound = (ObjBoundMethod*) object;
+            mark_value(bound->receiver);
+            mark_value(bound->method);
             break;
         }
     }
@@ -185,6 +250,7 @@ ObjClass* new_class(VM* vm, ObjString* name) {
     ObjClass* result = (ObjClass*) alloc_object(sizeof(ObjClass), OBJ_CLASS);
 
     result->name = name;
+    new (&result->methods) Table();
 
     vm->register_object((Obj*) result);
 
@@ -202,55 +268,15 @@ ObjInstance* new_instance(VM* vm, ObjClass* klass) {
     return result;
 }
 
+ObjBoundMethod* new_bound_method(VM* vm, Value receiver, Value method) {
+    assert(IS_FUNCTION(method) || IS_CLOSURE(method));
 
-void mark_object(Obj* object) {
-    if (object == NULL) return;
-    // assert(object != NULL);
-    if (object->marked) return;
+    ObjBoundMethod* result = (ObjBoundMethod*) alloc_object(sizeof(ObjBoundMethod), OBJ_BOUND_METHOD);
 
-    #ifdef DEBUG_LOG_GC
-    printf("%p mark ", (void*) object);
-    print_value(OBJ_VAL(object));
-    printf("\n");
-    #endif
+    result->receiver = receiver;
+    result->method = method;
 
-    object->marked = true;
+    vm->register_object((Obj*) result);
 
-    switch (object->type) {
-        case OBJ_STRING:
-        case OBJ_NATIVE:
-            break;
-
-        case OBJ_FUNCTION: {
-            ObjFunction* fn = (ObjFunction*) object;
-            mark_object((Obj*) fn->name);
-            fn->chunk.constants.mark_objects();
-            break;
-        }
-        case OBJ_UPVALUE: {
-            ObjUpvalue* upvalue = (ObjUpvalue*) object;
-            mark_value(upvalue->closed);
-            // don't follow list of open upvalues - VM will do that
-            break;
-        }
-        case OBJ_CLOSURE: {
-            ObjClosure* closure = (ObjClosure*) object;
-            mark_object((Obj*) closure->fn);
-            for (int i=0; i < closure->upvalue_count; i++) {
-                mark_object((Obj*) closure->upvalues[i]);
-            }
-            break;
-        }
-        case OBJ_CLASS: {
-            ObjClass* klass = (ObjClass*) object;
-            mark_object((Obj*) klass->name);
-            break;
-        }
-        case OBJ_INSTANCE: {
-            ObjInstance* instance = (ObjInstance*) object;
-            mark_object((Obj*) instance->klass);
-            instance->fields.mark_objects();
-            break;
-        }
-    }
+    return result;
 }

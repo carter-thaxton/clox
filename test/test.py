@@ -73,7 +73,7 @@ exit_code, stdout, stderr = run(['bin/clox', file])
 stdout_lines = [line for line in stdout.splitlines() if line]
 
 # split stderr into non-blank lines, and which don't match something like "[line 1] in script"
-stderr_lines = [line for line in stderr.splitlines() if line and not re.search(r'^\[line (\d+)\] in script$', line)]
+stderr_lines = [line for line in stderr.splitlines() if line and not re.search(r'^\[line (\d+)\] in ', line)]
 
 
 # print("testing:", file)

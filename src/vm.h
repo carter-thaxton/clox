@@ -70,10 +70,16 @@ private:
     void closure(Value fn);
     ObjUpvalue* capture_upvalue(int index);
     void close_upvalues(Value* value);
+    void define_method(ObjString* name);
+    bool bind_method(ObjClass* klass, ObjString* name);
+
+    InterpretResult get_property(ObjString* name);
+    InterpretResult set_property(ObjString* name);
 
     InterpretResult call_function(ObjFunction* fn, int argc);
     InterpretResult call_closure(ObjClosure* closure, int argc);
     InterpretResult call_class(ObjClass* klass, int argc);
+    InterpretResult call_bound_method(ObjBoundMethod* bound, int argc);
     InterpretResult call_value(Value callee, int argc);
 
     InterpretResult run();

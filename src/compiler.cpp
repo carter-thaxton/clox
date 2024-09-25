@@ -31,6 +31,7 @@ enum FunctionType {
     TYPE_SCRIPT,
     TYPE_ANONYMOUS,
     TYPE_FUNCTION,
+    TYPE_METHOD,
 };
 
 typedef void (*ParseFn)(bool lvalue);
@@ -70,6 +71,10 @@ struct Compiler {
     Upvalue upvalues[MAX_UPVALUES];
 };
 
+struct ClassCompiler {
+  ClassCompiler* parent;
+};
+
 // forward declarations
 static void grouping(bool lvalue);
 static void unary(bool lvalue);
@@ -79,6 +84,7 @@ static void literal(bool lvalue);
 static void string(bool lvalue);
 static void variable(bool lvalue);
 static void function(bool lvalue);
+static void this_(bool lavalue);
 static void and_(bool lvalue);
 static void or_(bool lvalue);
 static void call(bool lvalue);
@@ -128,7 +134,7 @@ static ParseRule rules[] = {
     [TOKEN_PRINT]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RETURN]          = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SUPER]           = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_THIS]            = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_THIS]            = {this_,    NULL,   PREC_NONE},
     [TOKEN_TRUE]            = {literal,  NULL,   PREC_NONE},
     [TOKEN_VAR]             = {NULL,     NULL,   PREC_NONE},
     [TOKEN_WHILE]           = {NULL,     NULL,   PREC_NONE},
@@ -139,6 +145,7 @@ static ParseRule rules[] = {
 static Parser parser;
 static VM *compiling_vm;
 static Compiler* current;
+static ClassCompiler* current_class;
 
 static Chunk* current_chunk() {
     return &current->fn->chunk;
@@ -187,6 +194,10 @@ static void emit_upvalue_ref(int index, bool is_local, int line) {
 
 static void emit_class(int constant, int line) {
     current_chunk()->write_variable_length_opcode(OP_CLASS, constant, line);
+}
+
+static void emit_method(int constant, int line) {
+    current_chunk()->write_variable_length_opcode(OP_METHOD, constant, line);
 }
 
 static void emit_define_global(int constant, int line) {
@@ -281,10 +292,9 @@ static int make_identifier_constant(Token* token) {
     return index;
 }
 
-// compare two identifier tokens
+// compare two tokens representing identifiers
+// note that token may not be of type TOKEN_IDENTIFIER, e.g. allow comparison of TOKEN_THIS or TOkEN_SUPER
 static bool identifiers_equal(Token* token1, Token* token2) {
-    if (token1->type != TOKEN_IDENTIFIER) return false;
-    if (token2->type != TOKEN_IDENTIFIER) return false;
     if (token1->length != token2->length) return false;
     return memcmp(token1->start, token2->start, token1->length) == 0;
 }
@@ -471,16 +481,23 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
     compiler->local_count = 0;
     compiler->scope_depth = 0;
 
-    // define an initial local variable for the function itself
+    // reserve an initial local variable for 'this' or the function itself
     Local* local = &compiler->locals[compiler->local_count++];
-    local->name.start = "";
-    local->name.length = 0;
+    if (type == TYPE_METHOD) {
+        local->name.start = "this";
+        local->name.length = 4;
+        local->name.type = TOKEN_THIS;
+    } else {
+        local->name.start = "";
+        local->name.length = 0;
+        local->name.type = TOKEN_FUN;
+    }
     local->name.line = 0;
-    local->name.type = TOKEN_FUN;
     local->depth = 0;
     local->is_captured = false;
 
     switch (type) {
+        case TYPE_METHOD:
         case TYPE_FUNCTION: {
             // use previous token as function name
             Value fn_name = string_value(compiling_vm, parser.previous.start, parser.previous.length);
@@ -524,7 +541,7 @@ static ObjFunction* end_compiler() {
 // Expressions
 //
 
-static void variable_helper(bool lvalue, Token* name);
+static void variable_helper(Token* name, bool lvalue);
 static void function_helper(FunctionType type);
 
 static ParseRule* get_rule(TokenType op_type) {
@@ -626,8 +643,15 @@ static void binary(bool _lvalue) {
     }
 }
 
+static void this_(bool lvalue) {
+    if (current_class == NULL) {
+        return parser.error("Can't use 'this' outside of a class.");
+    }
+    variable_helper(&parser.previous, false);  // disallow assignment to 'this'
+}
+
 static void variable(bool lvalue) {
-    variable_helper(lvalue, &parser.previous);
+    variable_helper(&parser.previous, lvalue);
 }
 
 static void function(bool _lvalue) {
@@ -924,6 +948,16 @@ static void statement(LoopContext* loop_ctx) {
     }
 }
 
+static void method() {
+    int line = parser.line();
+    parser.consume(TOKEN_IDENTIFIER, "Expect method name.");
+    int name_constant = make_identifier_constant(&parser.previous);
+
+    function_helper(TYPE_METHOD);   // TODO: handle constructor
+
+    emit_method(name_constant, line);
+}
+
 static void class_decl() {
     int name_constant = parse_variable("Expect class name.", true);
     if (name_constant < 0) return;
@@ -942,8 +976,22 @@ static void class_decl() {
         emit_define_global(name_constant, line);
     }
 
+    // new scope for class compiler
+    ClassCompiler class_compiler;
+    class_compiler.parent = current_class;
+    current_class = &class_compiler;
+
+    variable_helper(name_token, false);
+
     parser.consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+    while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
+        method();
+    }
     parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+    emit_byte(OP_POP, line);
+
+    // pop class scope
+    current_class = class_compiler.parent;
 }
 
 static void fun_decl() {
@@ -1000,7 +1048,7 @@ static void declaration(LoopContext* loop_ctx) {
     parser.synchronize();
 }
 
-static void variable_helper(bool lvalue, Token* name) {
+static void variable_helper(Token* name, bool lvalue) {
     int line = parser.line();
 
     // local
@@ -1052,6 +1100,9 @@ static void function_helper(FunctionType type) {
             break;
         case TYPE_FUNCTION:
             msg = "Expect '(' after function name.";
+            break;
+        case TYPE_METHOD:
+            msg = "Expect '(' after method name.";
             break;
     }
 
@@ -1107,6 +1158,7 @@ ObjFunction* compile(const char* src, VM* vm) {
     parser.init(src);
     compiling_vm = vm;
     current = NULL;
+    current_class = NULL;
 
     Compiler compiler;
     init_compiler(&compiler, TYPE_SCRIPT);
@@ -1119,6 +1171,7 @@ ObjFunction* compile(const char* src, VM* vm) {
     bool ok = !parser.had_error();
 
     // clear the static globals
+    current_class = NULL;
     current = NULL;
     compiling_vm = NULL;
     parser.init("");
