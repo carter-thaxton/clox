@@ -82,6 +82,7 @@ private:
     int frame_count;
     Obj* objects;
     int object_count;
+    int gc_object_threshold;
     ObjUpvalue* open_upvalues;
     Table strings;
     Table globals;

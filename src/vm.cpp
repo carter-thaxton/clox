@@ -8,8 +8,18 @@
 #include <stdarg.h>
 #include <assert.h>
 
+#ifdef DEBUG_STRESS_GC
+#define GC_INIT_THRESHOLD   0
+#define GC_GROW_FACTOR      0
+#else
+#define GC_INIT_THRESHOLD   1024
+#define GC_GROW_FACTOR      2
+#endif
+
 VM::VM() {
     this->debug_mode = false;
+    this->object_count = 0;
+    this->gc_object_threshold = GC_INIT_THRESHOLD;
     this->objects = NULL;
     this->open_upvalues = NULL;
     reset_stack();
@@ -49,8 +59,12 @@ void VM::gc() {
     strings.remove_unmarked_strings();
     int freed = sweep_objects();
 
+    // next threshold is minimum of GC_GROW_FACTOR * object_count and GC_INIT_THRESHOLD
+    int new_threshold = object_count * GC_GROW_FACTOR;
+    gc_object_threshold = new_threshold < GC_INIT_THRESHOLD ? GC_INIT_THRESHOLD : new_threshold;
+
     #ifdef DEBUG_LOG_GC
-    printf("-- gc end -- %d freed, %d remain\n", freed, object_count);
+    printf("-- gc end -- %d freed, %d remain, next at %d\n", freed, object_count, gc_object_threshold);
     #endif
 }
 
@@ -65,14 +79,12 @@ void VM::register_object(Obj* object) {
     this->objects = object;
     this->object_count++;
 
-    #ifdef DEBUG_STRESS_GC
-    {
+    if (object_count >= gc_object_threshold) {
         // push/pop prevents the current object from being freed
         this->push(OBJ_VAL(object));
         gc();
         this->pop();
     }
-    #endif
 }
 
 void VM::free_all_objects() {
