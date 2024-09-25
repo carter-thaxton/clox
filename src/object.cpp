@@ -128,11 +128,18 @@ Value define_native(VM* vm, const char* name, NativeFn fn) {
     fn_obj->native_fn = fn;
     vm->register_object((Obj*) fn_obj);
 
+    // push/pop for GC
     Value fn_val = OBJ_VAL(fn_obj);
+    vm->push(fn_val);
+
     Value name_val = string_value(vm, name, strlen(name));
+    vm->push(name_val);
+
     vm->globals.insert(AS_STRING(name_val), fn_val);
 
-    // push/pop for GC?
+    vm->pop();
+    vm->pop();
+
     return fn_val;
 }
 
@@ -164,7 +171,8 @@ ObjUpvalue* new_upvalue(VM* vm, Value* value) {
 }
 
 void mark_object(Obj* object) {
-    assert(object != NULL);
+    if (object == NULL) return;
+    // assert(object != NULL);
     if (object->marked) return;
 
     #ifdef DEBUG_LOG_GC

@@ -286,12 +286,15 @@ void print_object(Obj* object) {
             return;
         }
         case OBJ_UPVALUE: {
-            printf("<native fn>");
+            ObjUpvalue* upvalue = ((ObjUpvalue*) object);
+            printf("<upvalue ");
+            print_value(*upvalue->location);
+            printf(">");
             return;
         }
         case OBJ_CLOSURE: {
             ObjString* name = ((ObjClosure*) object)->fn->name;
-            printf("<fn %s>", name->chars);
+            printf("<fn %s closure>", name->chars);
             return;
         }
     }

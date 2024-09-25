@@ -44,9 +44,9 @@ public:
 
 private:
     void reset_stack();
-    void free_objects();
+    void free_all_objects();
     void mark_objects();
-    void sweep_objects();
+    int sweep_objects();
 
     InterpretResult runtime_error(const char* format, ...);
 
@@ -63,8 +63,8 @@ private:
     Value read_constant_16();
     Value read_constant_24();
 
-    void push(Value value);
     Value peek(int depth);
+    void push(Value value);
     Value pop();
     void pop_n(int n);
 

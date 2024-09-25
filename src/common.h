@@ -5,3 +5,4 @@
 #include <stdint.h>
 
 // #define DEBUG_LOG_GC
+// #define DEBUG_STRESS_GC

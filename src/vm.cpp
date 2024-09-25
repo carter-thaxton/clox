@@ -2,6 +2,7 @@
 #include "memory.h"
 #include "globals.h"
 #include "debug.h"
+#include "compiler.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -16,7 +17,7 @@ VM::VM() {
 }
 
 VM::~VM() {
-    free_objects();
+    free_all_objects();
 }
 
 InterpretResult VM::interpret(ObjFunction* main_fn) {
@@ -44,11 +45,12 @@ void VM::gc() {
     #endif
 
     mark_objects();
+    mark_compiler_roots();
     strings.remove_unmarked_strings();
-    sweep_objects();
+    int freed = sweep_objects();
 
     #ifdef DEBUG_LOG_GC
-    printf("-- gc end\n");
+    printf("-- gc end -- %d freed, %d remain\n", freed, object_count);
     #endif
 }
 
@@ -62,9 +64,18 @@ void VM::register_object(Obj* object) {
     object->next = this->objects;
     this->objects = object;
     this->object_count++;
+
+    #ifdef DEBUG_STRESS_GC
+    {
+        // push/pop prevents the current object from being freed
+        this->push(OBJ_VAL(object));
+        gc();
+        this->pop();
+    }
+    #endif
 }
 
-void VM::free_objects() {
+void VM::free_all_objects() {
     Obj* object = this->objects;
     while (object) {
         Obj* next = object->next;
@@ -79,9 +90,7 @@ void VM::free_objects() {
 void VM::mark_objects() {
     // stack
     for (Value* value = stack; value != stack_top; value++) {
-        if (IS_OBJ(*value)) {
-            mark_object(AS_OBJ(*value));
-        }
+        mark_value(*value);
     }
 
     // frames
@@ -105,9 +114,10 @@ void VM::mark_objects() {
     globals.mark_objects();
 }
 
-void VM::sweep_objects() {
+int VM::sweep_objects() {
     Obj* prev = NULL;
     Obj* object = this->objects;
+    int result = 0;
     while (object) {
         if (object->marked) {
             object->marked = false;
@@ -130,8 +140,10 @@ void VM::sweep_objects() {
 
             free_object(unreached);
             object_count--;
+            result++;
         }
     }
+    return result;
 }
 
 InterpretResult VM::runtime_error(const char* format, ...) {
@@ -206,7 +218,7 @@ inline Value VM::read_constant_24() {
     return chunk()->constants.values[constant];
 }
 
-inline void VM::push(Value value) {
+void VM::push(Value value) {
     *this->stack_top = value;
     this->stack_top++;
 }
@@ -215,7 +227,7 @@ inline Value VM::peek(int depth) {
     return this->stack_top[-1 - depth];
 }
 
-inline Value VM::pop() {
+Value VM::pop() {
     this->stack_top--;
     return *this->stack_top;
 }

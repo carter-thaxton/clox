@@ -450,6 +450,8 @@ static void end_scope() {
 
 static void init_compiler(Compiler* compiler, FunctionType type) {
     compiler->parent = current;
+    current = compiler;
+
     compiler->fn = new_function(compiling_vm);
     compiler->type = type;
     compiler->local_count = 0;
@@ -481,8 +483,6 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
             // leave function name as nil
         }
     }
-
-    current = compiler;
 }
 
 static ObjFunction* end_compiler() {

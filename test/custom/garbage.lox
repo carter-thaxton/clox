@@ -1,0 +1,12 @@
+
+fun gen_garbage(n) {
+    var x = 99;
+    for (var i = 0; i < n; i = i + 1) {
+        fun junk() {
+            var y = x + i;
+        }
+        junk();
+    }
+}
+
+gen_garbage(10000000);
