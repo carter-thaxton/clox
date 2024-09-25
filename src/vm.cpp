@@ -347,9 +347,10 @@ inline bool VM::bind_method(ObjClass* klass, ObjString* name) {
     return true;
 }
 
-inline InterpretResult VM::get_property(ObjString* name) {
+inline bool VM::get_property(ObjString* name) {
     if (!IS_INSTANCE(peek(0))) {
-        return runtime_error("Only instances have properties.");
+        runtime_error("Only instances have properties.");
+        return false;
     }
     ObjInstance* instance = AS_INSTANCE(peek(0));
     Value val;
@@ -359,21 +360,49 @@ inline InterpretResult VM::get_property(ObjString* name) {
     } else if (bind_method(instance->klass, name)) {
         // success
     } else {
-        return runtime_error("Undefined property '%s'.", name->chars);
+        runtime_error("Undefined property '%s'.", name->chars);
+        return false;
     }
-    return INTERPRET_OK;
+    return true;
 }
 
-inline InterpretResult VM::set_property(ObjString* name) {
+inline bool VM::set_property(ObjString* name) {
     if (!IS_INSTANCE(peek(1))) {
-        return runtime_error("Only instances have fields.");
+        runtime_error("Only instances have fields.");
+        return false;
     }
     ObjInstance* instance = AS_INSTANCE(peek(1));
     instance->fields.insert(name, peek(0));
     Value val = pop();
     pop(); // instance
     push(val);
-    return INTERPRET_OK;
+    return true;
+}
+
+inline InterpretResult VM::invoke_from_class(ObjClass* klass, ObjString* name, int argc) {
+    Value method;
+    if (!klass->methods.get(name, &method)) {
+        return runtime_error("Undefined property '%s'.", name->chars);
+    }
+    return call_value(method, argc);
+}
+
+inline InterpretResult VM::invoke(ObjString* name, int argc) {
+    Value receiver = peek(argc);
+    if (!IS_INSTANCE(receiver)) {
+        return runtime_error("Only instances have methods.");
+    }
+    ObjInstance* instance = AS_INSTANCE(receiver);
+
+    Value value;
+    if (instance->fields.get(name, &value)) {
+        // field on the instance
+        Value* location = stack_top - argc - 1;  // include args and the fn itself
+        *location = value;
+        return call_value(value, argc);
+    }
+
+    return invoke_from_class(instance->klass, name, argc);
 }
 
 inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
@@ -547,6 +576,28 @@ inline InterpretResult VM::run() {
             break;
         }
 
+        case OP_INVOKE: {
+            ObjString* name = AS_STRING(read_constant(1));
+            int argc = read_byte();
+            InterpretResult result = invoke(name, argc);
+            if (result != INTERPRET_OK) return result;
+            break;
+        }
+        case OP_INVOKE_16: {
+            ObjString* name = AS_STRING(read_constant(2));
+            int argc = read_byte();
+            InterpretResult result = invoke(name, argc);
+            if (result != INTERPRET_OK) return result;
+            break;
+        }
+        case OP_INVOKE_24: {
+            ObjString* name = AS_STRING(read_constant(3));
+            int argc = read_byte();
+            InterpretResult result = invoke(name, argc);
+            if (result != INTERPRET_OK) return result;
+            break;
+        }
+
         case OP_CLOSURE: {
             Value fn = read_constant(1);
             closure(fn);
@@ -701,39 +752,33 @@ inline InterpretResult VM::run() {
 
         case OP_GET_PROPERTY: {
             ObjString* name = AS_STRING(read_constant(1));
-            InterpretResult result = get_property(name);
-            if (result != INTERPRET_OK) return result;
+            if (!get_property(name)) return INTERPRET_RUNTIME_ERROR;
             break;
         }
         case OP_GET_PROPERTY_16: {
             ObjString* name = AS_STRING(read_constant(2));
-            InterpretResult result = get_property(name);
-            if (result != INTERPRET_OK) return result;
+            if (!get_property(name)) return INTERPRET_RUNTIME_ERROR;
             break;
         }
         case OP_GET_PROPERTY_24: {
             ObjString* name = AS_STRING(read_constant(3));
-            InterpretResult result = get_property(name);
-            if (result != INTERPRET_OK) return result;
+            if (!get_property(name)) return INTERPRET_RUNTIME_ERROR;
             break;
         }
 
         case OP_SET_PROPERTY: {
             ObjString* name = AS_STRING(read_constant(1));
-            InterpretResult result = set_property(name);
-            if (result != INTERPRET_OK) return result;
+            if (!set_property(name)) return INTERPRET_RUNTIME_ERROR;
             break;
         }
         case OP_SET_PROPERTY_16: {
             ObjString* name = AS_STRING(read_constant(2));
-            InterpretResult result = set_property(name);
-            if (result != INTERPRET_OK) return result;
+            if (!set_property(name)) return INTERPRET_RUNTIME_ERROR;
             break;
         }
         case OP_SET_PROPERTY_24: {
             ObjString* name = AS_STRING(read_constant(3));
-            InterpretResult result = set_property(name);
-            if (result != INTERPRET_OK) return result;
+            if (!set_property(name)) return INTERPRET_RUNTIME_ERROR;
             break;
         }
 
@@ -858,8 +903,8 @@ inline InterpretResult VM::run() {
             break;
         }
         case OP_CALL: {
-            int arg_count = read_byte();
-            InterpretResult result = call_value(peek(arg_count), arg_count);
+            int argc = read_byte();
+            InterpretResult result = call_value(peek(argc), argc);
             if (result != INTERPRET_OK) return result;
             break;
         }

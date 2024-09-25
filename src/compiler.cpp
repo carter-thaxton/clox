@@ -201,6 +201,11 @@ static void emit_method(int constant, int line) {
     current_chunk()->write_variable_length_opcode(OP_METHOD, constant, line);
 }
 
+static void emit_invoke(int constant, int argc, int line) {
+    current_chunk()->write_variable_length_opcode(OP_INVOKE, constant, line);
+    emit_byte(argc, line);
+}
+
 static void emit_define_global(int constant, int line) {
     current_chunk()->write_variable_length_opcode(OP_DEFINE_GLOBAL, constant, line);
 }
@@ -708,8 +713,8 @@ static int arguments() {
 
 static void call(bool _lvalue) {
     int line = parser.line();
-    int arg_count = arguments();
-    emit_bytes(OP_CALL, arg_count, line);
+    int argc = arguments();
+    emit_bytes(OP_CALL, argc, line);
 }
 
 static void dot(bool lvalue) {
@@ -720,6 +725,9 @@ static void dot(bool lvalue) {
     if (lvalue && parser.match(TOKEN_EQUAL)) {
         expression();
         emit_set_property(name_constant, line);
+    } else if (parser.match(TOKEN_LEFT_PAREN)) {
+        int argc = arguments();
+        emit_invoke(name_constant, argc, line);
     } else {
         emit_get_property(name_constant, line);
     }

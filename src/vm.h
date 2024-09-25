@@ -72,9 +72,11 @@ private:
     void close_upvalues(Value* value);
     void define_method(ObjString* name);
     bool bind_method(ObjClass* klass, ObjString* name);
+    bool get_property(ObjString* name);
+    bool set_property(ObjString* name);
 
-    InterpretResult get_property(ObjString* name);
-    InterpretResult set_property(ObjString* name);
+    InterpretResult invoke(ObjString* name, int argc);
+    InterpretResult invoke_from_class(ObjClass* klass, ObjString* name, int argc);
 
     InterpretResult call_function(ObjFunction* fn, int argc);
     InterpretResult call_closure(ObjClosure* closure, int argc);

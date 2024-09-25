@@ -14,6 +14,12 @@ static void print_constant(const char* name, Chunk* chunk, int constant) {
     printf("'\n");
 }
 
+static void print_invoke(const char* name, Chunk* chunk, int constant, int argc) {
+    printf("%-16s (%d args) %4d '", name, argc, constant);
+    print_value(chunk->constants.values[constant]);
+    printf("'\n");
+}
+
 static void print_index(const char* name, Chunk* chunk, int index) {
     printf("%-16s %4d\n", name, index);
 }
@@ -100,6 +106,30 @@ static int print_closure_24_inst(const char* name, Chunk* chunk, int offset) {
     return print_upvalue_refs(chunk, constant, offset + 4);
 }
 
+static int print_invoke_inst(const char* name, Chunk* chunk, int offset) {
+    int constant = chunk->code[offset + 1];
+    int argc = chunk->code[offset + 2];
+    print_invoke(name, chunk, constant, argc);
+    return offset + 3;
+}
+
+static int print_invoke_16_inst(const char* name, Chunk* chunk, int offset) {
+    int constant = chunk->code[offset + 1];
+    constant |= chunk->code[offset + 2] << 8;
+    int argc = chunk->code[offset + 3];
+    print_invoke(name, chunk, constant, argc);
+    return offset + 4;
+}
+
+static int print_invoke_24_inst(const char* name, Chunk* chunk, int offset) {
+    int constant = chunk->code[offset + 1];
+    constant |= chunk->code[offset + 2] << 8;
+    constant |= chunk->code[offset + 3] << 16;
+    int argc = chunk->code[offset + 4];
+    print_invoke(name, chunk, constant, argc);
+    return offset + 5;
+}
+
 void print_chunk(Chunk* chunk, const char* name) {
     printf("== %s ==\n", name);
 
@@ -147,6 +177,13 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_constant_16_inst("OP_METHOD_16", chunk, offset);
     case OP_METHOD_24:
         return print_constant_24_inst("OP_METHOD_24", chunk, offset);
+
+    case OP_INVOKE:
+        return print_invoke_inst("OP_INVOKE", chunk, offset);
+    case OP_INVOKE_16:
+        return print_invoke_16_inst("OP_INVOKE_16", chunk, offset);
+    case OP_INVOKE_24:
+        return print_invoke_24_inst("OP_INVOKE_24", chunk, offset);
 
     case OP_CLOSURE:
         return print_closure_inst("OP_CLOSURE", chunk, offset);

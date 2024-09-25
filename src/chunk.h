@@ -22,6 +22,10 @@ enum OpCode {
     OP_METHOD_16,
     OP_METHOD_24,
 
+    OP_INVOKE,
+    OP_INVOKE_16,
+    OP_INVOKE_24,
+
     OP_CLOSURE,
     OP_CLOSURE_16,
     OP_CLOSURE_24,
