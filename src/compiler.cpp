@@ -718,7 +718,7 @@ static void dot(bool lvalue) {
 // Statements
 //
 
-static void declaration(LoopContext* loop_ctx);
+static bool declaration(LoopContext* loop_ctx);
 static void statement(LoopContext* loop_ctx);
 static void var_decl();
 
@@ -917,8 +917,10 @@ static void return_stmt(LoopContext* loop_ctx) {
 
 static void block(LoopContext* loop_ctx) {
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
-        declaration(loop_ctx);
+        bool panicked = declaration(loop_ctx);
+        if (panicked && parser.check(TOKEN_EOF)) return;
     }
+
     parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
@@ -1034,7 +1036,7 @@ static void var_decl() {
     }
 }
 
-static void declaration(LoopContext* loop_ctx) {
+static bool declaration(LoopContext* loop_ctx) {
     if (parser.match(TOKEN_CLASS)) {
         class_decl();
     } else if (parser.match(TOKEN_FUN)) {
@@ -1045,7 +1047,7 @@ static void declaration(LoopContext* loop_ctx) {
         statement(loop_ctx);
     }
 
-    parser.synchronize();
+    return parser.synchronize();
 }
 
 static void variable_helper(Token* name, bool lvalue) {

@@ -37,12 +37,6 @@ def parse_expectations(file):
       if m:
         expect_parser_errors.append(m.group(1))
 
-      # parse c-only error with line number
-      m = re.search(r'^// (\[c line (\d+)\] Error(.+))', line)
-      if m:
-        error = m.group(1).replace("c line", "line")
-        expect_parser_errors.append(error)
-
       # parse error without line number
       m = re.search(r'.// (Error (.+))', line)
       if m:
