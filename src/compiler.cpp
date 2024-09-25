@@ -683,7 +683,7 @@ static int arguments() {
     if (!parser.check(TOKEN_RIGHT_PAREN)) {
         do {
             if (count >= 255) {
-                parser.error("Can't have more than 255 arguments.");
+                parser.error_at_current("Can't have more than 255 arguments.");
                 break;
             }
             expression();
@@ -718,7 +718,7 @@ static void dot(bool lvalue) {
 // Statements
 //
 
-static bool declaration(LoopContext* loop_ctx);
+static void declaration(LoopContext* loop_ctx);
 static void statement(LoopContext* loop_ctx);
 static void var_decl();
 
@@ -917,11 +917,12 @@ static void return_stmt(LoopContext* loop_ctx) {
 
 static void block(LoopContext* loop_ctx) {
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
-        bool panicked = declaration(loop_ctx);
-        if (panicked && parser.check(TOKEN_EOF)) return;
+        declaration(loop_ctx);
     }
 
-    parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+    if (!parser.error_at_end()) {
+        parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+    }
 }
 
 static void statement(LoopContext* loop_ctx) {
@@ -989,8 +990,11 @@ static void class_decl() {
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
         method();
     }
-    parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
-    emit_byte(OP_POP, line);
+
+    if (!parser.error_at_end()) {
+        parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+        emit_byte(OP_POP, line);
+    }
 
     // pop class scope
     current_class = class_compiler.parent;
@@ -1036,7 +1040,7 @@ static void var_decl() {
     }
 }
 
-static bool declaration(LoopContext* loop_ctx) {
+static void declaration(LoopContext* loop_ctx) {
     if (parser.match(TOKEN_CLASS)) {
         class_decl();
     } else if (parser.match(TOKEN_FUN)) {
@@ -1047,7 +1051,7 @@ static bool declaration(LoopContext* loop_ctx) {
         statement(loop_ctx);
     }
 
-    return parser.synchronize();
+    parser.synchronize();
 }
 
 static void variable_helper(Token* name, bool lvalue) {

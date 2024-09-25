@@ -23,6 +23,7 @@ struct Parser {
     int line_at_current() const { return current.line; }
 
     bool had_error() const { return error_count > 0; }
+    bool error_at_end() const { return check(TOKEN_EOF) && had_error(); }
 
     // publicly readable
     Token current;
