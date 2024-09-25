@@ -59,9 +59,8 @@ private:
     int read_unsigned_24();
     int read_signed_16();
 
-    Value read_constant();
-    Value read_constant_16();
-    Value read_constant_24();
+    int read_unsigned(int length);
+    Value read_constant(int length);
 
     Value peek(int depth);
     void push(Value value);

@@ -197,6 +197,20 @@ int print_instruction(Chunk* chunk, int offset) {
     case OP_SET_UPVALUE_24:
         return print_index_24_inst("OP_SET_UPVALUE_24", chunk, offset);
 
+    case OP_GET_PROPERTY:
+        return print_constant_inst("OP_GET_PROPERTY", chunk, offset);
+    case OP_GET_PROPERTY_16:
+        return print_constant_16_inst("OP_GET_PROPERTY_16", chunk, offset);
+    case OP_GET_PROPERTY_24:
+        return print_constant_24_inst("OP_GET_PROPERTY_24", chunk, offset);
+
+    case OP_SET_PROPERTY:
+        return print_constant_inst("OP_SET_PROPERTY", chunk, offset);
+    case OP_SET_PROPERTY_16:
+        return print_constant_16_inst("OP_SET_PROPERTY_16", chunk, offset);
+    case OP_SET_PROPERTY_24:
+        return print_constant_24_inst("OP_SET_PROPERTY_24", chunk, offset);
+
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
     case OP_SUBTRACT:

@@ -215,18 +215,29 @@ inline int VM::read_signed_16() {
     return (int) index;
 }
 
-inline Value VM::read_constant() {
-    int constant = this->read_byte();
-    return chunk()->constants.values[constant];
+inline int VM::read_unsigned(int length) {
+    if (length == 1) {
+        return this->read_byte();
+    } else if (length == 2) {
+        return this->read_unsigned_16();
+    } else if (length == 3) {
+        return this->read_unsigned_24();
+    } else {
+        assert(!"read_unsigned length must be 1, 2, or 3");
+    }
 }
 
-inline Value VM::read_constant_16() {
-    int constant = this->read_unsigned_16();
-    return chunk()->constants.values[constant];
-}
-
-inline Value VM::read_constant_24() {
-    int constant = this->read_unsigned_24();
+inline Value VM::read_constant(int length) {
+    int constant;
+    if (length == 1) {
+        constant = this->read_byte();
+    } else if (length == 2) {
+        constant = this->read_unsigned_16();
+    } else if (length == 3) {
+        constant = this->read_unsigned_24();
+    } else {
+        assert(!"read_constant length must be 1, 2, or 3");
+    }
     return chunk()->constants.values[constant];
 }
 
@@ -416,74 +427,74 @@ inline InterpretResult VM::run() {
         }
 
         case OP_CONSTANT: {
-            Value val = read_constant();
+            Value val = read_constant(1);
             push(val);
             break;
         }
         case OP_CONSTANT_16: {
-            Value val = read_constant_16();
+            Value val = read_constant(2);
             push(val);
             break;
         }
         case OP_CONSTANT_24: {
-            Value val = read_constant_24();
+            Value val = read_constant(3);
             push(val);
             break;
         }
 
         case OP_CLASS: {
-            ObjString* name = AS_STRING(read_constant());
+            ObjString* name = AS_STRING(read_constant(1));
             push(OBJ_VAL(new_class(this, name)));
             break;
         }
         case OP_CLASS_16: {
-            ObjString* name = AS_STRING(read_constant_16());
+            ObjString* name = AS_STRING(read_constant(2));
             push(OBJ_VAL(new_class(this, name)));
             break;
         }
         case OP_CLASS_24: {
-            ObjString* name = AS_STRING(read_constant_24());
+            ObjString* name = AS_STRING(read_constant(3));
             push(OBJ_VAL(new_class(this, name)));
             break;
         }
 
         case OP_CLOSURE: {
-            Value fn = read_constant();
+            Value fn = read_constant(1);
             closure(fn);
             break;
         }
         case OP_CLOSURE_16: {
-            Value fn = read_constant_16();
+            Value fn = read_constant(2);
             closure(fn);
             break;
         }
         case OP_CLOSURE_24: {
-            Value fn = read_constant_24();
+            Value fn = read_constant(3);
             closure(fn);
             break;
         }
 
         case OP_DEFINE_GLOBAL: {
-            ObjString* name = AS_STRING(read_constant());
+            ObjString* name = AS_STRING(read_constant(1));
             globals.insert(name, peek(0));
             pop();
             break;
         }
         case OP_DEFINE_GLOBAL_16: {
-            ObjString* name = AS_STRING(read_constant_16());
+            ObjString* name = AS_STRING(read_constant(2));
             globals.insert(name, peek(0));
             pop();
             break;
         }
         case OP_DEFINE_GLOBAL_24: {
-            ObjString* name = AS_STRING(read_constant_24());
+            ObjString* name = AS_STRING(read_constant(3));
             globals.insert(name, peek(0));
             pop();
             break;
         }
 
         case OP_GET_GLOBAL: {
-            ObjString* name = AS_STRING(read_constant());
+            ObjString* name = AS_STRING(read_constant(1));
             Value val;
             if (globals.get(name, &val)) {
                 push(val);
@@ -493,7 +504,7 @@ inline InterpretResult VM::run() {
             break;
         }
         case OP_GET_GLOBAL_16: {
-            ObjString* name = AS_STRING(read_constant_16());
+            ObjString* name = AS_STRING(read_constant(2));
             Value val;
             if (globals.get(name, &val)) {
                 push(val);
@@ -503,7 +514,7 @@ inline InterpretResult VM::run() {
             break;
         }
         case OP_GET_GLOBAL_24: {
-            ObjString* name = AS_STRING(read_constant_24());
+            ObjString* name = AS_STRING(read_constant(3));
             Value val;
             if (globals.get(name, &val)) {
                 push(val);
@@ -514,21 +525,21 @@ inline InterpretResult VM::run() {
         }
 
         case OP_SET_GLOBAL: {
-            ObjString* name = AS_STRING(read_constant());
+            ObjString* name = AS_STRING(read_constant(1));
             if (!globals.set(name, peek(0))) {
                 return runtime_error("Undefined variable '%s'.", name->chars);
             }
             break;
         }
         case OP_SET_GLOBAL_16: {
-            ObjString* name = AS_STRING(read_constant_16());
+            ObjString* name = AS_STRING(read_constant(2));
             if (!globals.set(name, peek(0))) {
                 return runtime_error("Undefined variable '%s'.", name->chars);
             }
             break;
         }
         case OP_SET_GLOBAL_24: {
-            ObjString* name = AS_STRING(read_constant_24());
+            ObjString* name = AS_STRING(read_constant(3));
             if (!globals.set(name, peek(0))) {
                 return runtime_error("Undefined variable '%s'.", name->chars);
             }
@@ -536,66 +547,149 @@ inline InterpretResult VM::run() {
         }
 
         case OP_GET_LOCAL: {
-            int index = read_byte();
+            int index = read_unsigned(1);
             push(frame()->values[index]);
             break;
         }
         case OP_GET_LOCAL_16: {
-            int index = read_unsigned_16();
+            int index = read_unsigned(2);
             push(frame()->values[index]);
             break;
         }
         case OP_GET_LOCAL_24: {
-            int index = read_unsigned_24();
+            int index = read_unsigned(3);
             push(frame()->values[index]);
             break;
         }
 
         case OP_SET_LOCAL: {
-            int index = read_byte();
+            int index = read_unsigned(1);
             frame()->values[index] = peek(0);
             break;
         }
         case OP_SET_LOCAL_16: {
-            int index = read_unsigned_16();
+            int index = read_unsigned(2);
             frame()->values[index] = peek(0);
             break;
         }
         case OP_SET_LOCAL_24: {
-            int index = read_unsigned_24();
+            int index = read_unsigned(3);
             frame()->values[index] = peek(0);
             break;
         }
 
         case OP_GET_UPVALUE: {
-            int index = read_byte();
+            int index = read_unsigned(1);
             push(*frame()->closure->upvalues[index]->location);
             break;
         }
         case OP_GET_UPVALUE_16: {
-            int index = read_unsigned_16();
+            int index = read_unsigned(2);
             push(*frame()->closure->upvalues[index]->location);
             break;
         }
         case OP_GET_UPVALUE_24: {
-            int index = read_unsigned_24();
+            int index = read_unsigned(3);
             push(*frame()->closure->upvalues[index]->location);
             break;
         }
 
         case OP_SET_UPVALUE: {
-            int index = read_byte();
+            int index = read_unsigned(1);
             *frame()->closure->upvalues[index]->location = peek(0);
             break;
         }
         case OP_SET_UPVALUE_16: {
-            int index = read_unsigned_16();
+            int index = read_unsigned(2);
             *frame()->closure->upvalues[index]->location = peek(0);
             break;
         }
         case OP_SET_UPVALUE_24: {
-            int index = read_unsigned_24();
+            int index = read_unsigned(3);
             *frame()->closure->upvalues[index]->location = peek(0);
+            break;
+        }
+
+        case OP_GET_PROPERTY: {
+            ObjString* name = AS_STRING(read_constant(1));
+            if (!IS_INSTANCE(peek(0))) {
+                return runtime_error("Only instances have properties.");
+            }
+            ObjInstance* instance = AS_INSTANCE(peek(0));
+            Value val;
+            if (instance->fields.get(name, &val)) {
+                pop(); // instance
+                push(val);
+            } else {
+                return runtime_error("Undefined property '%s'.", name->chars);
+            }
+            break;
+        }
+        case OP_GET_PROPERTY_16: {
+            ObjString* name = AS_STRING(read_constant(2));
+            if (!IS_INSTANCE(peek(0))) {
+                return runtime_error("Only instances have properties.");
+            }
+            ObjInstance* instance = AS_INSTANCE(peek(0));
+            Value val;
+            if (instance->fields.get(name, &val)) {
+                pop(); // instance
+                push(val);
+            } else {
+                return runtime_error("Undefined property '%s'.", name->chars);
+            }
+            break;
+        }
+        case OP_GET_PROPERTY_24: {
+            ObjString* name = AS_STRING(read_constant(3));
+            if (!IS_INSTANCE(peek(0))) {
+                return runtime_error("Only instances have properties.");
+            }
+            ObjInstance* instance = AS_INSTANCE(peek(0));
+            Value val;
+            if (instance->fields.get(name, &val)) {
+                pop(); // instance
+                push(val);
+            } else {
+                return runtime_error("Undefined property '%s'.", name->chars);
+            }
+            break;
+        }
+
+        case OP_SET_PROPERTY: {
+            ObjString* name = AS_STRING(read_constant(1));
+            if (!IS_INSTANCE(peek(1))) {
+                return runtime_error("Only instances have fields.");
+            }
+            ObjInstance* instance = AS_INSTANCE(peek(1));
+            instance->fields.insert(name, peek(0));
+            Value val = pop();
+            pop(); // instance
+            push(val);
+            break;
+        }
+        case OP_SET_PROPERTY_16: {
+            ObjString* name = AS_STRING(read_constant(2));
+            if (!IS_INSTANCE(peek(1))) {
+                return runtime_error("Only instances have fields.");
+            }
+            ObjInstance* instance = AS_INSTANCE(peek(1));
+            instance->fields.insert(name, peek(0));
+            Value val = pop();
+            pop(); // instance
+            push(val);
+            break;
+        }
+        case OP_SET_PROPERTY_24: {
+            ObjString* name = AS_STRING(read_constant(3));
+            if (!IS_INSTANCE(peek(1))) {
+                return runtime_error("Only instances have fields.");
+            }
+            ObjInstance* instance = AS_INSTANCE(peek(1));
+            instance->fields.insert(name, peek(0));
+            Value val = pop();
+            pop(); // instance
+            push(val);
             break;
         }
 
