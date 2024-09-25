@@ -212,6 +212,10 @@ static void emit_set_upvalue(int index, int line) {
     current_chunk()->write_set_upvalue(index, line);
 }
 
+static void emit_class(int index, int line) {
+    current_chunk()->write_class(index, line);
+}
+
 static int emit_jump(uint8_t opcode, int line) {
     emit_byte(opcode, line);
     emit_bytes(0xFF, 0xFF, line);           // 2 bytes for placeholder
@@ -389,14 +393,15 @@ static bool declare_variable() {
 // parse identifier as variable name
 // in local scope, checks and registers as local variable
 // in global scope, makes string object, and adds as a constant value to chunk
+// set always_make_constant to behave like global scope and create an identifier constant
 // return the local or global constant index on success
 // return -1 and produce parser error on failure
-static int parse_variable(const char* err_msg) {
+static int parse_variable(const char* err_msg, bool always_make_constant) {
     if (!parser.consume(TOKEN_IDENTIFIER, err_msg)) return -1;
 
     if (!declare_variable()) return -1;
 
-    if (current->scope_depth > 0) {
+    if (!always_make_constant && current->scope_depth > 0) {
         // local: index is the most recently declared variable above
         return current->local_count - 1;
     } else {
@@ -929,8 +934,28 @@ static void statement(LoopContext* loop_ctx) {
     }
 }
 
+static void class_decl() {
+    int index = parse_variable("Expect class name.", true);
+    if (index < 0) return;
+
+    int line = parser.line();
+    if (current->scope_depth > 0) {
+        // mark initialized, so class can refer to itself by name
+        define_local(current->local_count - 1);
+    }
+
+    emit_class(index, line);
+
+    if (current->scope_depth == 0) {
+        emit_define_global(index, line);
+    }
+
+    parser.consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+    parser.consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+}
+
 static void fun_decl() {
-    int index = parse_variable("Expect function name.");
+    int index = parse_variable("Expect function name.", false);
     if (index < 0) return;
 
     int line = parser.line();
@@ -947,7 +972,7 @@ static void fun_decl() {
 }
 
 static void var_decl() {
-    int index = parse_variable("Expect variable name.");
+    int index = parse_variable("Expect variable name.", false);
     if (index < 0) return;
 
     int line = parser.line();
@@ -970,7 +995,9 @@ static void var_decl() {
 }
 
 static void declaration(LoopContext* loop_ctx) {
-    if (parser.match(TOKEN_FUN)) {
+    if (parser.match(TOKEN_CLASS)) {
+        class_decl();
+    } else if (parser.match(TOKEN_FUN)) {
         fun_decl();
     } else if (parser.match(TOKEN_VAR)) {
         var_decl();
@@ -1013,7 +1040,7 @@ static void function_helper(FunctionType type) {
                 break;
             }
             current->fn->arity++;
-            int index = parse_variable("Expect parameter name.");
+            int index = parse_variable("Expect parameter name.", false);
             if (index < 0) break;
             define_local(index);
         } while (parser.match(TOKEN_COMMA));

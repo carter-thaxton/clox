@@ -44,6 +44,11 @@ void free_object(Obj* object) {
             reallocate(closure, size, 0);
             break;
         }
+        case OBJ_CLASS: {
+            ObjClass* klass = (ObjClass*) object;
+            FREE(ObjClass, klass);
+            break;
+        }
     }
 }
 
@@ -170,6 +175,17 @@ ObjUpvalue* new_upvalue(VM* vm, Value* value) {
     return result;
 }
 
+ObjClass* new_class(VM* vm, ObjString* name) {
+    ObjClass* result = (ObjClass*) alloc_object(sizeof(ObjClass), OBJ_CLASS);
+
+    result->name = name;
+
+    vm->register_object((Obj*) result);
+
+    return result;
+}
+
+
 void mark_object(Obj* object) {
     if (object == NULL) return;
     // assert(object != NULL);
@@ -206,6 +222,11 @@ void mark_object(Obj* object) {
             for (int i=0; i < closure->upvalue_count; i++) {
                 mark_object((Obj*) closure->upvalues[i]);
             }
+            break;
+        }
+        case OBJ_CLASS: {
+            ObjClass* klass = (ObjClass*) object;
+            mark_object((Obj*) klass->name);
             break;
         }
     }

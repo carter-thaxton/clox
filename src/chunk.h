@@ -14,6 +14,10 @@ enum OpCode {
     OP_CONSTANT_16,
     OP_CONSTANT_24,
 
+    OP_CLASS,
+    OP_CLASS_16,
+    OP_CLASS_24,
+
     OP_CLOSURE,
     OP_CLOSURE_16,
     OP_CLOSURE_24,
@@ -53,7 +57,6 @@ enum OpCode {
     OP_EQUAL,
     OP_LESS,
     OP_GREATER,
-
     OP_NEGATE,
     OP_NOT,
 
@@ -76,6 +79,7 @@ struct Chunk {
     uint8_t read_back(int offset);
 
     void write_constant(int constant, int line);
+    void write_class(int constant, int line);
     void write_closure(int constant, int line);
     void write_define_global(int constant, int line);
     void write_get_global(int constant, int line);

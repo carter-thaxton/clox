@@ -14,6 +14,7 @@ enum ObjType {
     OBJ_NATIVE,
     OBJ_UPVALUE,
     OBJ_CLOSURE,
+    OBJ_CLASS,
 };
 
 struct Obj {
@@ -56,6 +57,11 @@ struct ObjClosure {
     ObjUpvalue* upvalues[];
 };
 
+struct ObjClass {
+    Obj obj;
+    ObjString* name;
+};
+
 #define OBJ_TYPE(value)     (AS_OBJ(value)->type)
 
 #define IS_STRING(value)    (is_obj_type(value, OBJ_STRING))
@@ -73,6 +79,9 @@ struct ObjClosure {
 
 #define IS_CLOSURE(value)   (is_obj_type(value, OBJ_CLOSURE))
 #define AS_CLOSURE(value)   ((ObjClosure*) AS_OBJ(value))
+
+#define IS_CLASS(value)     (is_obj_type(value, OBJ_CLASS))
+#define AS_CLASS(value)     ((ObjClass*) AS_OBJ(value))
 
 #define STRING_MAX_LEN      0x7FFFFF00
 
@@ -94,3 +103,4 @@ Value define_native(VM* vm, const char* name, NativeFn fn);
 
 ObjClosure* new_closure(VM* vm, ObjFunction* fn);
 ObjUpvalue* new_upvalue(VM* vm, Value* value);
+ObjClass* new_class(VM* vm, ObjString* name);

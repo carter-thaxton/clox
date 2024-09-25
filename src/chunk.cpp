@@ -70,6 +70,10 @@ void Chunk::write_constant(int constant, int line) {
     write_variable_length_opcode(this, OP_CONSTANT, constant, line);
 }
 
+void Chunk::write_class(int constant, int line) {
+    write_variable_length_opcode(this, OP_CLASS, constant, line);
+}
+
 void Chunk::write_closure(int constant, int line) {
     write_variable_length_opcode(this, OP_CLOSURE, constant, line);
 }

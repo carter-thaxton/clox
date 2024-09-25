@@ -422,6 +422,22 @@ inline InterpretResult VM::run() {
             break;
         }
 
+        case OP_CLASS: {
+            ObjString* name = AS_STRING(read_constant());
+            push(OBJ_VAL(new_class(this, name)));
+            break;
+        }
+        case OP_CLASS_16: {
+            ObjString* name = AS_STRING(read_constant_16());
+            push(OBJ_VAL(new_class(this, name)));
+            break;
+        }
+        case OP_CLASS_24: {
+            ObjString* name = AS_STRING(read_constant_24());
+            push(OBJ_VAL(new_class(this, name)));
+            break;
+        }
+
         case OP_CLOSURE: {
             Value fn = read_constant();
             closure(fn);

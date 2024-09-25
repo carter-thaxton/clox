@@ -133,6 +133,13 @@ int print_instruction(Chunk* chunk, int offset) {
     case OP_CONSTANT_24:
         return print_constant_24_inst("OP_CONSTANT_24", chunk, offset);
 
+    case OP_CLASS:
+        return print_constant_inst("OP_CLASS", chunk, offset);
+    case OP_CLASS_16:
+        return print_constant_16_inst("OP_CLASS_16", chunk, offset);
+    case OP_CLASS_24:
+        return print_constant_24_inst("OP_CLASS_24", chunk, offset);
+
     case OP_CLOSURE:
         return print_closure_inst("OP_CLOSURE", chunk, offset);
     case OP_CLOSURE_16:
@@ -295,6 +302,11 @@ void print_object(Obj* object) {
         case OBJ_CLOSURE: {
             ObjString* name = ((ObjClosure*) object)->fn->name;
             printf("<fn %s closure>", name->chars);
+            return;
+        }
+        case OBJ_CLASS: {
+            ObjString* name = ((ObjClass*) object)->name;
+            printf("%s", name->chars);
             return;
         }
     }
