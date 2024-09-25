@@ -345,6 +345,12 @@ inline InterpretResult VM::call_closure(ObjClosure* closure, int argc) {
     return INTERPRET_OK;
 }
 
+inline InterpretResult VM::call_class(ObjClass* klass, int argc) {
+    Value* location = stack_top - argc - 1;  // include args and the fn itself
+    *location = OBJ_VAL(new_instance(this, klass));
+    return INTERPRET_OK;
+}
+
 inline InterpretResult VM::call_value(Value callee, int argc) {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
@@ -360,6 +366,9 @@ inline InterpretResult VM::call_value(Value callee, int argc) {
         }
         case OBJ_CLOSURE: {
             return call_closure(AS_CLOSURE(callee), argc);
+        }
+        case OBJ_CLASS: {
+            return call_class(AS_CLASS(callee), argc);
         }
         default:
             ; // not callable

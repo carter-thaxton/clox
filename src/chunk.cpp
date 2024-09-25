@@ -41,71 +41,29 @@ uint8_t Chunk::read_back(int offset) {
 
 // Support a family of 8/16/24-bit OpCodes, which refer to a non-negative numeric index, like constants or locals.
 // This assumes that base_op is the 8-bit code, with 16-bit as the next numeric opcode, followed by 24-bit
-static void write_variable_length_opcode(Chunk* chunk, OpCode base_op, int index, int line) {
+void Chunk::write_variable_length_opcode(OpCode base_op, int index, int line) {
     assert(index >= 0 && index <= MAX_INDEX);
 
     if (index < 256) {
         // 8-bit index
-        chunk->write(base_op, line);
-        chunk->write((uint8_t) index, line);
+        write(base_op, line);
+        write((uint8_t) index, line);
     } else if (index < 65536) {
         // 16-bit index
-        chunk->write(base_op + 1, line);
-        chunk->write((uint8_t) (index & 0xFF), line);
+        write(base_op + 1, line);
+        write((uint8_t) (index & 0xFF), line);
         index >>= 8;
-        chunk->write((uint8_t) (index & 0xFF), line);
+        write((uint8_t) (index & 0xFF), line);
     } else {
         // 24-bit index
-        chunk->write(base_op + 2, line);
-        chunk->write((uint8_t) (index & 0xFF), line);
+        write(base_op + 2, line);
+        write((uint8_t) (index & 0xFF), line);
         index >>= 8;
-        chunk->write((uint8_t) (index & 0xFF), line);
+        write((uint8_t) (index & 0xFF), line);
         index >>= 8;
-        chunk->write((uint8_t) (index & 0xFF), line);
+        write((uint8_t) (index & 0xFF), line);
     }
 }
-
-
-void Chunk::write_constant(int constant, int line) {
-    write_variable_length_opcode(this, OP_CONSTANT, constant, line);
-}
-
-void Chunk::write_class(int constant, int line) {
-    write_variable_length_opcode(this, OP_CLASS, constant, line);
-}
-
-void Chunk::write_closure(int constant, int line) {
-    write_variable_length_opcode(this, OP_CLOSURE, constant, line);
-}
-
-void Chunk::write_define_global(int constant, int line) {
-    write_variable_length_opcode(this, OP_DEFINE_GLOBAL, constant, line);
-}
-
-void Chunk::write_get_global(int constant, int line) {
-    write_variable_length_opcode(this, OP_GET_GLOBAL, constant, line);
-}
-
-void Chunk::write_set_global(int constant, int line) {
-    write_variable_length_opcode(this, OP_SET_GLOBAL, constant, line);
-}
-
-void Chunk::write_get_local(int index, int line) {
-    write_variable_length_opcode(this, OP_GET_LOCAL, index, line);
-}
-
-void Chunk::write_set_local(int index, int line) {
-    write_variable_length_opcode(this, OP_SET_LOCAL, index, line);
-}
-
-void Chunk::write_get_upvalue(int index, int line) {
-    write_variable_length_opcode(this, OP_GET_UPVALUE, index, line);
-}
-
-void Chunk::write_set_upvalue(int index, int line) {
-    write_variable_length_opcode(this, OP_SET_UPVALUE, index, line);
-}
-
 
 int Chunk::add_constant_value(Value value) {
     // check if value has already been added

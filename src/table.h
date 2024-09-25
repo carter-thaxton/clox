@@ -2,7 +2,8 @@
 
 #include "common.h"
 #include "value.h"
-#include "object.h"
+
+struct ObjString;
 
 struct Entry {
     ObjString* key;

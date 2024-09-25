@@ -1,4 +1,5 @@
 #include "debug.h"
+#include "object.h"
 
 #include <stdio.h>
 
@@ -307,6 +308,11 @@ void print_object(Obj* object) {
         case OBJ_CLASS: {
             ObjString* name = ((ObjClass*) object)->name;
             printf("%s", name->chars);
+            return;
+        }
+        case OBJ_INSTANCE: {
+            ObjString* name = ((ObjInstance*) object)->klass->name;
+            printf("%s instance", name->chars);
             return;
         }
     }

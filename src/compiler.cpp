@@ -82,6 +82,7 @@ static void function(bool lvalue);
 static void and_(bool lvalue);
 static void or_(bool lvalue);
 static void call(bool lvalue);
+static void dot(bool lvalue);
 
 
 static ParseRule rules[] = {
@@ -93,7 +94,7 @@ static ParseRule rules[] = {
     [TOKEN_LEFT_BRACE]      = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RIGHT_BRACE]     = {NULL,     NULL,   PREC_NONE},
     [TOKEN_COMMA]           = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_DOT]             = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_DOT]             = {NULL,     dot,    PREC_CALL},
     [TOKEN_MINUS]           = {unary,    binary, PREC_TERM},
     [TOKEN_PLUS]            = {unary,    binary, PREC_TERM},
     [TOKEN_SEMICOLON]       = {NULL,     NULL,   PREC_NONE},
@@ -162,7 +163,7 @@ static int emit_constant(Value value) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
-    current_chunk()->write_constant(index, parser.line());
+    current_chunk()->write_variable_length_opcode(OP_CONSTANT, index, parser.line());
     return index;
 }
 
@@ -173,7 +174,7 @@ static int emit_closure(Value value) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
-    current_chunk()->write_closure(index, parser.line());
+    current_chunk()->write_variable_length_opcode(OP_CLOSURE, index, parser.line());
     return index;
 }
 
@@ -184,36 +185,44 @@ static void emit_upvalue_ref(int index, bool is_local, int line) {
     emit_bytes(word & 0xFF, word >> 8, line);
 }
 
+static void emit_class(int constant, int line) {
+    current_chunk()->write_variable_length_opcode(OP_CLASS, constant, line);
+}
+
 static void emit_define_global(int constant, int line) {
-    current_chunk()->write_define_global(constant, line);
+    current_chunk()->write_variable_length_opcode(OP_DEFINE_GLOBAL, constant, line);
 }
 
 static void emit_get_global(int constant, int line) {
-    current_chunk()->write_get_global(constant, line);
+    current_chunk()->write_variable_length_opcode(OP_GET_GLOBAL, constant, line);
 }
 
 static void emit_set_global(int constant, int line) {
-    current_chunk()->write_set_global(constant, line);
+    current_chunk()->write_variable_length_opcode(OP_SET_GLOBAL, constant, line);
 }
 
 static void emit_get_local(int index, int line) {
-    current_chunk()->write_get_local(index, line);
+    current_chunk()->write_variable_length_opcode(OP_GET_LOCAL, index, line);
 }
 
 static void emit_set_local(int index, int line) {
-    current_chunk()->write_set_local(index, line);
+    current_chunk()->write_variable_length_opcode(OP_SET_LOCAL, index, line);
 }
 
 static void emit_get_upvalue(int index, int line) {
-    current_chunk()->write_get_upvalue(index, line);
+    current_chunk()->write_variable_length_opcode(OP_GET_UPVALUE, index, line);
 }
 
 static void emit_set_upvalue(int index, int line) {
-    current_chunk()->write_set_upvalue(index, line);
+    current_chunk()->write_variable_length_opcode(OP_SET_UPVALUE, index, line);
 }
 
-static void emit_class(int index, int line) {
-    current_chunk()->write_class(index, line);
+static void emit_get_property(int constant, int line) {
+    current_chunk()->write_variable_length_opcode(OP_GET_PROPERTY, constant, line);
+}
+
+static void emit_set_property(int constant, int line) {
+    current_chunk()->write_variable_length_opcode(OP_SET_PROPERTY, constant, line);
 }
 
 static int emit_jump(uint8_t opcode, int line) {
@@ -515,6 +524,7 @@ static ObjFunction* end_compiler() {
 // Expressions
 //
 
+static void variable_helper(bool lvalue, Token* name);
 static void function_helper(FunctionType type);
 
 static ParseRule* get_rule(TokenType op_type) {
@@ -617,40 +627,7 @@ static void binary(bool _lvalue) {
 }
 
 static void variable(bool lvalue) {
-    int line = parser.line();
-
-    // local
-    int local = resolve_local(current, &parser.previous);
-    if (local >= 0) {
-        if (lvalue && parser.match(TOKEN_EQUAL)) {
-            expression();
-            emit_set_local(local, line);
-        } else {
-            emit_get_local(local, line);
-        }
-        return;
-    }
-
-    // upvalue
-    int upvalue = resolve_upvalue(current, &parser.previous);
-    if (upvalue >= 0) {
-        if (lvalue && parser.match(TOKEN_EQUAL)) {
-            expression();
-            emit_set_upvalue(upvalue, line);
-        } else {
-            emit_get_upvalue(upvalue, line);
-        }
-        return;
-    }
-
-    // global
-    int constant = make_identifier_constant(&parser.previous);
-    if (lvalue && parser.match(TOKEN_EQUAL)) {
-        expression();
-        emit_set_global(constant, line);
-    } else {
-        emit_get_global(constant, line);
-    }
+    variable_helper(lvalue, &parser.previous);
 }
 
 static void function(bool _lvalue) {
@@ -697,6 +674,19 @@ static void call(bool _lvalue) {
     int line = parser.line();
     int arg_count = arguments();
     emit_bytes(OP_CALL, arg_count, line);
+}
+
+static void dot(bool lvalue) {
+    int line = parser.line();
+    parser.consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
+    int name_constant = make_identifier_constant(&parser.previous);
+
+    if (lvalue && parser.match(TOKEN_EQUAL)) {
+        expression();
+        emit_set_property(name_constant, line);
+    } else {
+        emit_get_property(name_constant, line);
+    }
 }
 
 
@@ -935,19 +925,21 @@ static void statement(LoopContext* loop_ctx) {
 }
 
 static void class_decl() {
-    int index = parse_variable("Expect class name.", true);
-    if (index < 0) return;
+    int name_constant = parse_variable("Expect class name.", true);
+    if (name_constant < 0) return;
 
+    Token* name_token = &parser.previous;
     int line = parser.line();
+
     if (current->scope_depth > 0) {
         // mark initialized, so class can refer to itself by name
         define_local(current->local_count - 1);
     }
 
-    emit_class(index, line);
+    emit_class(name_constant, line);
 
     if (current->scope_depth == 0) {
-        emit_define_global(index, line);
+        emit_define_global(name_constant, line);
     }
 
     parser.consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
@@ -1006,6 +998,43 @@ static void declaration(LoopContext* loop_ctx) {
     }
 
     parser.synchronize();
+}
+
+static void variable_helper(bool lvalue, Token* name) {
+    int line = parser.line();
+
+    // local
+    int local = resolve_local(current, name);
+    if (local >= 0) {
+        if (lvalue && parser.match(TOKEN_EQUAL)) {
+            expression();
+            emit_set_local(local, line);
+        } else {
+            emit_get_local(local, line);
+        }
+        return;
+    }
+
+    // upvalue
+    int upvalue = resolve_upvalue(current, name);
+    if (upvalue >= 0) {
+        if (lvalue && parser.match(TOKEN_EQUAL)) {
+            expression();
+            emit_set_upvalue(upvalue, line);
+        } else {
+            emit_get_upvalue(upvalue, line);
+        }
+        return;
+    }
+
+    // global
+    int constant = make_identifier_constant(name);
+    if (lvalue && parser.match(TOKEN_EQUAL)) {
+        expression();
+        emit_set_global(constant, line);
+    } else {
+        emit_get_global(constant, line);
+    }
 }
 
 static void function_helper(FunctionType type) {

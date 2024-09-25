@@ -49,6 +49,12 @@ void free_object(Obj* object) {
             FREE(ObjClass, klass);
             break;
         }
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = (ObjInstance*) object;
+            instance->fields.~Table();
+            FREE(ObjInstance, instance);
+            break;
+        }
     }
 }
 
@@ -185,6 +191,17 @@ ObjClass* new_class(VM* vm, ObjString* name) {
     return result;
 }
 
+ObjInstance* new_instance(VM* vm, ObjClass* klass) {
+    ObjInstance* result = (ObjInstance*) alloc_object(sizeof(ObjInstance), OBJ_INSTANCE);
+
+    result->klass = klass;
+    new (&result->fields) Table();
+
+    vm->register_object((Obj*) result);
+
+    return result;
+}
+
 
 void mark_object(Obj* object) {
     if (object == NULL) return;
@@ -227,6 +244,12 @@ void mark_object(Obj* object) {
         case OBJ_CLASS: {
             ObjClass* klass = (ObjClass*) object;
             mark_object((Obj*) klass->name);
+            break;
+        }
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = (ObjInstance*) object;
+            mark_object((Obj*) instance->klass);
+            instance->fields.mark_objects();
             break;
         }
     }

@@ -3,6 +3,7 @@
 #include "common.h"
 #include "value.h"
 #include "chunk.h"
+#include "table.h"
 
 struct VM;
 
@@ -15,6 +16,7 @@ enum ObjType {
     OBJ_UPVALUE,
     OBJ_CLOSURE,
     OBJ_CLASS,
+    OBJ_INSTANCE,
 };
 
 struct Obj {
@@ -62,6 +64,12 @@ struct ObjClass {
     ObjString* name;
 };
 
+struct ObjInstance {
+    Obj obj;
+    ObjClass* klass;
+    Table fields;
+};
+
 #define OBJ_TYPE(value)     (AS_OBJ(value)->type)
 
 #define IS_STRING(value)    (is_obj_type(value, OBJ_STRING))
@@ -82,6 +90,9 @@ struct ObjClass {
 
 #define IS_CLASS(value)     (is_obj_type(value, OBJ_CLASS))
 #define AS_CLASS(value)     ((ObjClass*) AS_OBJ(value))
+
+#define IS_INSTANCE(value)  (is_obj_type(value, OBJ_INSTANCE))
+#define AS_INSTANCE(value)  ((ObjInstance*) AS_OBJ(value))
 
 #define STRING_MAX_LEN      0x7FFFFF00
 
@@ -104,3 +115,4 @@ Value define_native(VM* vm, const char* name, NativeFn fn);
 ObjClosure* new_closure(VM* vm, ObjFunction* fn);
 ObjUpvalue* new_upvalue(VM* vm, Value* value);
 ObjClass* new_class(VM* vm, ObjString* name);
+ObjInstance* new_instance(VM* vm, ObjClass* klass);

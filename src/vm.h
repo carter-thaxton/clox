@@ -74,6 +74,7 @@ private:
 
     InterpretResult call_function(ObjFunction* fn, int argc);
     InterpretResult call_closure(ObjClosure* closure, int argc);
+    InterpretResult call_class(ObjClass* klass, int argc);
     InterpretResult call_value(Value callee, int argc);
 
     InterpretResult run();
