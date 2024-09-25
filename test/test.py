@@ -161,25 +161,24 @@ else:
     fail = 1
 
 
-  if exit_code == SUCCESS_EXIT_CODE:
-    for expected, actual in zip(expect_output, stdout_lines):
-      if expected == actual:
-        print(PASS + ": expect: " + expected)
-      else:
-        print(FAIL + ": Expected output: " + expected + " - got: " + actual)
-        fail = 1
-
-    if len(expect_output) > len(stdout_lines):
-      index = len(stdout_lines)
-      expected = expect_output[index]
-      print(FAIL + ": Expected output: " + expected + " - got nothing")
+  for expected, actual in zip(expect_output, stdout_lines):
+    if expected == actual:
+      print(PASS + ": expect: " + expected)
+    else:
+      print(FAIL + ": Expected output: " + expected + " - got: " + actual)
       fail = 1
 
-    if len(expect_output) < len(stdout_lines):
-      index = len(expect_output)
-      actual = stdout_lines[index]
-      print(FAIL + ": Unexpected output: " + actual)
-      fail = 1
+  if len(expect_output) > len(stdout_lines):
+    index = len(stdout_lines)
+    expected = expect_output[index]
+    print(FAIL + ": Expected output: " + expected + " - got nothing")
+    fail = 1
+
+  if len(expect_output) < len(stdout_lines):
+    index = len(expect_output)
+    actual = stdout_lines[index]
+    print(FAIL + ": Unexpected output: " + actual)
+    fail = 1
 
 
 exit(fail)
