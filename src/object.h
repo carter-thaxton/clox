@@ -18,8 +18,8 @@ enum ObjType {
 
 struct Obj {
     ObjType type;
-    Obj* next;
     bool marked;
+    Obj* next;
 };
 
 struct ObjString {

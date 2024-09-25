@@ -9,8 +9,8 @@
 Obj* alloc_object(size_t size, ObjType type) {
     Obj* object = (Obj*) reallocate(NULL, 0, size);
     object->type = type;
-    object->next = NULL;  // will be set when registered with VM
     object->marked = false;
+    object->next = NULL;  // will be set when registered with VM
     return object;
 }
 
