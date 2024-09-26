@@ -2,7 +2,7 @@
 TARGET_NAME	:= clox
 
 CC       := g++
-CFLAGS   := -g -O2
+CFLAGS   := -g -O3
 LFLAGS   := -l readline
 
 BIN_PATH := bin
