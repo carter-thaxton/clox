@@ -213,6 +213,11 @@ static void emit_invoke(int constant, int argc, int line) {
     emit_byte(argc, line);
 }
 
+static void emit_invoke_super(int constant, int argc, int line) {
+    current_chunk()->write_variable_length_opcode(OP_INVOKE_SUPER, constant, line);
+    emit_byte(argc, line);
+}
+
 static void emit_define_global(int constant, int line) {
     current_chunk()->write_variable_length_opcode(OP_DEFINE_GLOBAL, constant, line);
 }
@@ -671,31 +676,6 @@ static void binary(bool _lvalue) {
     }
 }
 
-static void this_(bool lvalue) {
-    if (current_class == NULL) {
-        return parser.error("Can't use 'this' outside of a class.");
-    }
-    variable_helper(&parser.previous, false);  // disallow assignment to 'this'
-}
-
-static void super_(bool lvalue) {
-    if (current_class == NULL) {
-        return parser.error("Can't use 'super' outside of a class.");
-    } else if (!current_class->has_superclass) {
-        return parser.error("Can't use 'super' in a class with no superclass.");
-    }
-
-    int line = parser.line();
-    parser.consume(TOKEN_DOT, "Expect '.' after 'super'.");
-    parser.consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
-    int method_constant = make_identifier_constant(&parser.previous);
-
-    variable_helper(&this_token, false);
-    variable_helper(&super_token, false);
-
-    emit_get_super(method_constant, line);
-}
-
 static void variable(bool lvalue) {
     variable_helper(&parser.previous, lvalue);
 }
@@ -762,6 +742,35 @@ static void dot(bool lvalue) {
     }
 }
 
+static void this_(bool lvalue) {
+    if (current_class == NULL) {
+        return parser.error("Can't use 'this' outside of a class.");
+    }
+    variable_helper(&parser.previous, false);  // disallow assignment to 'this'
+}
+
+static void super_(bool lvalue) {
+    if (current_class == NULL) {
+        return parser.error("Can't use 'super' outside of a class.");
+    } else if (!current_class->has_superclass) {
+        return parser.error("Can't use 'super' in a class with no superclass.");
+    }
+
+    int line = parser.line();
+    parser.consume(TOKEN_DOT, "Expect '.' after 'super'.");
+    parser.consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
+    int method_constant = make_identifier_constant(&parser.previous);
+
+    variable_helper(&this_token, false);
+    if (parser.match(TOKEN_LEFT_PAREN)) {
+        int argc = arguments();
+        variable_helper(&super_token, false);
+        emit_invoke_super(method_constant, argc, line);
+    } else {
+        variable_helper(&super_token, false);
+        emit_get_super(method_constant, line);
+    }
+}
 
 //
 // Statements

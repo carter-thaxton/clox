@@ -185,6 +185,13 @@ int print_instruction(Chunk* chunk, int offset) {
     case OP_INVOKE_24:
         return print_invoke_24_inst("OP_INVOKE_24", chunk, offset);
 
+    case OP_INVOKE_SUPER:
+        return print_invoke_inst("OP_INVOKE_SUPER", chunk, offset);
+    case OP_INVOKE_SUPER_16:
+        return print_invoke_16_inst("OP_INVOKE_SUPER_16", chunk, offset);
+    case OP_INVOKE_SUPER_24:
+        return print_invoke_24_inst("OP_INVOKE_SUPER_24", chunk, offset);
+
     case OP_CLOSURE:
         return print_closure_inst("OP_CLOSURE", chunk, offset);
     case OP_CLOSURE_16:

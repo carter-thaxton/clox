@@ -77,6 +77,7 @@ private:
     bool get_super(ObjString* name);
 
     InterpretResult invoke(ObjString* name, int argc);
+    InterpretResult invoke_super(ObjString* name, int argc);
     InterpretResult invoke_from_class(ObjClass* klass, ObjString* name, int argc);
 
     InterpretResult call_function(ObjFunction* fn, int argc);

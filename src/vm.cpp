@@ -389,14 +389,6 @@ inline bool VM::get_super(ObjString* name) {
     return true;
 }
 
-inline InterpretResult VM::invoke_from_class(ObjClass* klass, ObjString* name, int argc) {
-    Value method;
-    if (!klass->methods.get(name, &method)) {
-        return runtime_error("Undefined property '%s'.", name->chars);
-    }
-    return call_value(method, argc);
-}
-
 inline InterpretResult VM::invoke(ObjString* name, int argc) {
     Value receiver = peek(argc);
     if (!IS_INSTANCE(receiver)) {
@@ -413,6 +405,20 @@ inline InterpretResult VM::invoke(ObjString* name, int argc) {
     }
 
     return invoke_from_class(instance->klass, name, argc);
+}
+
+inline InterpretResult VM::invoke_super(ObjString* name, int argc) {
+    assert(IS_CLASS(peek(0)));
+    ObjClass* superclass = AS_CLASS(pop());
+    return invoke_from_class(superclass, name, argc);
+}
+
+inline InterpretResult VM::invoke_from_class(ObjClass* klass, ObjString* name, int argc) {
+    Value method;
+    if (!klass->methods.get(name, &method)) {
+        return runtime_error("Undefined property '%s'.", name->chars);
+    }
+    return call_value(method, argc);
 }
 
 inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
@@ -604,6 +610,28 @@ inline InterpretResult VM::run() {
             ObjString* name = AS_STRING(read_constant(3));
             int argc = read_byte();
             InterpretResult result = invoke(name, argc);
+            if (result != INTERPRET_OK) return result;
+            break;
+        }
+
+        case OP_INVOKE_SUPER: {
+            ObjString* name = AS_STRING(read_constant(1));
+            int argc = read_byte();
+            InterpretResult result = invoke_super(name, argc);
+            if (result != INTERPRET_OK) return result;
+            break;
+        }
+        case OP_INVOKE_SUPER_16: {
+            ObjString* name = AS_STRING(read_constant(2));
+            int argc = read_byte();
+            InterpretResult result = invoke_super(name, argc);
+            if (result != INTERPRET_OK) return result;
+            break;
+        }
+        case OP_INVOKE_SUPER_24: {
+            ObjString* name = AS_STRING(read_constant(3));
+            int argc = read_byte();
+            InterpretResult result = invoke_super(name, argc);
             if (result != INTERPRET_OK) return result;
             break;
         }
