@@ -14,4 +14,5 @@ fi
 output="./bench_results/$(basename "$1")$suffix.trace"
 
 echo "Saving results to: $output"
+rm -rf "$output"
 xctrace record --output "$output" --template "Time Profiler" --time-limit 12s --launch -- bin/clox "$1"
