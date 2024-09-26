@@ -89,6 +89,7 @@ private:
     InterpretResult run();
 
     CallFrame frames[FRAME_MAX];
+    CallFrame* frame_p;
     int frame_count;
     Obj* objects;
     int object_count;

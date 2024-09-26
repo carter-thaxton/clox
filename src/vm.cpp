@@ -44,6 +44,7 @@ InterpretResult VM::interpret(ObjFunction* main_fn) {
 void VM::reset_stack() {
     this->stack_top = this->stack;
     this->frame_count = 0;
+    this->frame_p = NULL;
 }
 
 void VM::clear() {
@@ -192,8 +193,7 @@ InterpretResult VM::runtime_error(const char* format, ...) {
 }
 
 inline CallFrame* VM::frame() {
-    assert(frame_count > 0);
-    return &frames[frame_count-1];
+    return frame_p;
 }
 
 inline Chunk* VM::chunk() {
@@ -248,13 +248,13 @@ inline Value VM::read_constant(int length) {
     return chunk()->constants.values[constant];
 }
 
+inline Value VM::peek(int depth) {
+    return this->stack_top[-1 - depth];
+}
+
 void VM::push(Value value) {
     *this->stack_top = value;
     this->stack_top++;
-}
-
-inline Value VM::peek(int depth) {
-    return this->stack_top[-1 - depth];
 }
 
 Value VM::pop() {
@@ -437,6 +437,7 @@ inline InterpretResult VM::call_function(ObjFunction* fn, int argc) {
     f->ip = fn->chunk.code;
     f->values = stack_top - argc - 1;  // include args and the fn itself
 
+    frame_p = f;
     return INTERPRET_OK;
 }
 
@@ -454,6 +455,7 @@ inline InterpretResult VM::call_closure(ObjClosure* closure, int argc) {
     f->ip = closure->fn->chunk.code;
     f->values = stack_top - argc - 1;  // include args and the fn itself
 
+    frame_p = f;
     return INTERPRET_OK;
 }
 
@@ -933,6 +935,7 @@ inline InterpretResult VM::run() {
                 pop();  // pop main script fn
                 return INTERPRET_OK;
             }
+            frame_p = &frames[frame_count-1];
             stack_top = frame_top;
             push(result);
             break;
