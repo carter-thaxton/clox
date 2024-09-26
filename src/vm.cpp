@@ -379,6 +379,16 @@ inline bool VM::set_property(ObjString* name) {
     return true;
 }
 
+inline bool VM::get_super(ObjString* name) {
+    assert(IS_CLASS(peek(0)));
+    ObjClass* superclass = AS_CLASS(pop());
+    if (!bind_method(superclass, name)) {
+        runtime_error("Undefined property '%s'.", name->chars);
+        return false;
+    }
+    return true;
+}
+
 inline InterpretResult VM::invoke_from_class(ObjClass* klass, ObjString* name, int argc) {
     Value method;
     if (!klass->methods.get(name, &method)) {
@@ -779,6 +789,22 @@ inline InterpretResult VM::run() {
         case OP_SET_PROPERTY_24: {
             ObjString* name = AS_STRING(read_constant(3));
             if (!set_property(name)) return INTERPRET_RUNTIME_ERROR;
+            break;
+        }
+
+        case OP_GET_SUPER: {
+            ObjString* name = AS_STRING(read_constant(1));
+            if (!get_super(name)) return INTERPRET_RUNTIME_ERROR;
+            break;
+        }
+        case OP_GET_SUPER_16: {
+            ObjString* name = AS_STRING(read_constant(2));
+            if (!get_super(name)) return INTERPRET_RUNTIME_ERROR;
+            break;
+        }
+        case OP_GET_SUPER_24: {
+            ObjString* name = AS_STRING(read_constant(3));
+            if (!get_super(name)) return INTERPRET_RUNTIME_ERROR;
             break;
         }
 

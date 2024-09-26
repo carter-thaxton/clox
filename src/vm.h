@@ -74,6 +74,7 @@ private:
     bool bind_method(ObjClass* klass, ObjString* name);
     bool get_property(ObjString* name);
     bool set_property(ObjString* name);
+    bool get_super(ObjString* name);
 
     InterpretResult invoke(ObjString* name, int argc);
     InterpretResult invoke_from_class(ObjClass* klass, ObjString* name, int argc);
