@@ -28,8 +28,7 @@ void Table::clear() {
 }
 
 static Entry* find_entry_helper(Entry* entries, int capacity, ObjString* key) {
-    // TODO: use binary masking instead of modulo
-    uint32_t index = key->hash % capacity;
+    uint32_t index = key->hash & (capacity - 1);
     Entry* tombstone = NULL;
 
     while (true) {
@@ -47,7 +46,7 @@ static Entry* find_entry_helper(Entry* entries, int capacity, ObjString* key) {
                 tombstone = entry;
             }
         }
-        index = (index + 1) % capacity;
+        index = (index + 1) & (capacity - 1);
     }
 }
 
@@ -158,7 +157,7 @@ void Table::adjust_capacity(int new_capacity) {
 ObjString* Table::find_string(const char* str, int length, uint32_t hash) {
     if (count == 0) return NULL;
 
-    uint32_t index = hash % capacity;
+    uint32_t index = hash & (capacity - 1);
     while (true) {
         Entry* entry = &entries[index];
         if (entry->key == NULL) {
@@ -175,7 +174,7 @@ ObjString* Table::find_string(const char* str, int length, uint32_t hash) {
             }
         }
 
-        index = (index + 1) % capacity;
+        index = (index + 1) & (capacity - 1);
     }
 }
 
