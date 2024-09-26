@@ -317,23 +317,18 @@ int print_instruction(Chunk* chunk, int offset) {
 }
 
 void print_value(Value value) {
-    switch (value.type) {
-        case VAL_NIL: {
-            printf("nil");
-            return;
-        }
-        case VAL_BOOL: {
-            printf(AS_BOOL(value) ? "true" : "false");
-            return;
-        }
-        case VAL_NUMBER: {
-            printf("%.10g", AS_NUMBER(value));
-            return;
-        }
-        case VAL_OBJ: {
-            print_object(AS_OBJ(value));
-            return;
-        }
+    if (IS_NIL(value)) {
+        printf("nil");
+        return;
+    } else if (IS_BOOL(value)) {
+        printf(AS_BOOL(value) ? "true" : "false");
+        return;
+    } else if (IS_NUMBER(value)) {
+        printf("%.10g", AS_NUMBER(value));
+        return;
+    } else if (IS_OBJ(value)) {
+        print_object(AS_OBJ(value));
+        return;
     }
 
     printf("Unrecognized value type\n");

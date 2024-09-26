@@ -3,7 +3,17 @@
 #include "object.h"
 #include <stdio.h>
 
+int dummy = 99;
+
 int main() {
+    printf("sizeof(Value)   = %lu\n", sizeof(Value));
+    printf("sizeof(Obj)     = %lu\n", sizeof(Obj));
+    printf("main            = %p\n",  main);
+    printf("&dummy          = %p\n",  &dummy);
+    return 0;
+}
+
+int test_tables() {
     VM vm;
     Table table;
 

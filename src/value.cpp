@@ -35,6 +35,13 @@ void ValueArray::mark_objects() {
 }
 
 bool values_equal(Value a, Value b) {
+    #ifdef NAN_BOXING
+    if (IS_NUMBER(a) && IS_NUMBER(b)) {
+        return AS_NUMBER(a) == AS_NUMBER(b);
+    } else {
+        return a == b;
+    }
+    #else
     if (a.type != b.type) return false;
     switch (a.type) {
         case VAL_NIL: return true;
@@ -43,6 +50,7 @@ bool values_equal(Value a, Value b) {
         case VAL_OBJ: return AS_OBJ(a) == AS_OBJ(b);
     }
     return false;
+    #endif
 }
 
 void mark_value(Value value) {
