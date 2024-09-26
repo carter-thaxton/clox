@@ -9,9 +9,10 @@
 
 #include "debug.h"
 
-#define MAX_BREAK_STMTS     64
-#define MAX_LOCALS          2048    // architecture limits these to 32767
-#define MAX_UPVALUES        2048    // (two bytes, with one bit used to distinguish between local vs upvalue)
+#define MAX_CONSTANTS       256     // architecture limits these to 16777215   (24-bits)
+#define MAX_LOCALS          256     // architecture limits these to 32767      (15-bits)
+#define MAX_UPVALUES        256     // (two bytes, with one bit used to distinguish between local vs upvalue)
+#define MAX_BREAK_STMTS     64      // only a compiler limit
 
 enum Precedence {
     PREC_NONE,
@@ -172,22 +173,22 @@ static void emit_bytes(uint8_t byte1, uint8_t byte2, int line) {
 }
 
 static int emit_constant(Value value) {
-    int index = current_chunk()->add_constant_value(value);
-    if (index > MAX_INDEX) {
+    if (current_chunk()->constants.length >= MAX_CONSTANTS) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
+    int index = current_chunk()->add_constant_value(value);
     current_chunk()->write_variable_length_opcode(OP_CONSTANT, index, parser.line());
     return index;
 }
 
 static int emit_closure(Value value) {
     assert(IS_FUNCTION(value));
-    int index = current_chunk()->add_constant_value(value);
-    if (index > MAX_INDEX) {
+    if (current_chunk()->constants.length >= MAX_CONSTANTS) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
+    int index = current_chunk()->add_constant_value(value);
     current_chunk()->write_variable_length_opcode(OP_CLOSURE, index, parser.line());
     return index;
 }
@@ -311,16 +312,16 @@ static void emit_return(int line) {
 // create and register a string object, and add string as a constant value to chunk
 // return the constant index, or -1 on failure
 static int make_identifier_constant(Token* token) {
-    Value value = string_value(compiling_vm, token->start, token->length);
-    if (IS_NIL(value)) { parser.error("String too long."); return -1; }
-
-    int index = current_chunk()->add_constant_value(value);
-    if (index > MAX_INDEX) {
+    if (current_chunk()->constants.length >= MAX_CONSTANTS) {
         parser.error("Too many constants in one chunk.");
         return -1;
     }
-
-    return index;
+    Value value = string_value(compiling_vm, token->start, token->length);
+    if (IS_NIL(value)) {
+        parser.error("String too long.");
+        return -1;
+    }
+    return current_chunk()->add_constant_value(value);
 }
 
 // compare two tokens representing identifiers

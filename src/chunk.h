@@ -3,7 +3,9 @@
 #include "common.h"
 #include "value.h"
 
-#define MAX_INDEX ((1 << 24) - 1)
+#define MAX_INDEX_ARCH      ((1 << 24) - 1)
+#define MAX_LOCALS_ARCH     ((1 << 15) - 1)
+#define MAX_UPVALUES_ARCH   ((1 << 15) - 1)
 
 enum OpCode {
     OP_NIL,
