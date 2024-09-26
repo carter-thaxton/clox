@@ -255,6 +255,13 @@ int print_instruction(Chunk* chunk, int offset) {
     case OP_SET_PROPERTY_24:
         return print_constant_24_inst("OP_SET_PROPERTY_24", chunk, offset);
 
+    case OP_GET_SUPER:
+        return print_constant_inst("OP_GET_SUPER", chunk, offset);
+    case OP_GET_SUPER_16:
+        return print_constant_16_inst("OP_GET_SUPER_16", chunk, offset);
+    case OP_GET_SUPER_24:
+        return print_constant_24_inst("OP_GET_SUPER_24", chunk, offset);
+
     case OP_ADD:
         return print_simple_inst("OP_ADD", offset);
     case OP_SUBTRACT:
@@ -293,6 +300,8 @@ int print_instruction(Chunk* chunk, int offset) {
         return print_index_inst("OP_CALL", chunk, offset);
     case OP_CLOSE_UPVALUE:
         return print_simple_inst("OP_CLOSE_UPVALUE", offset);
+    case OP_INHERIT:
+        return print_simple_inst("OP_INHERIT", offset);
 
     default:
         printf("Unknown opcode %d\n", inst);

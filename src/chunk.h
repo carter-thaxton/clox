@@ -66,6 +66,10 @@ enum OpCode {
     OP_SET_PROPERTY_16,
     OP_SET_PROPERTY_24,
 
+    OP_GET_SUPER,
+    OP_GET_SUPER_16,
+    OP_GET_SUPER_24,
+
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
@@ -85,6 +89,7 @@ enum OpCode {
     OP_JUMP_IF_TRUE,
     OP_CALL,
     OP_CLOSE_UPVALUE,
+    OP_INHERIT,
 };
 
 struct Chunk {

@@ -74,6 +74,7 @@ struct Compiler {
 
 struct ClassCompiler {
   ClassCompiler* parent;
+  bool has_superclass;
 };
 
 // forward declarations
@@ -86,6 +87,7 @@ static void string(bool lvalue);
 static void variable(bool lvalue);
 static void function(bool lvalue);
 static void this_(bool lavalue);
+static void super_(bool lvalue);
 static void and_(bool lvalue);
 static void or_(bool lvalue);
 static void call(bool lvalue);
@@ -134,7 +136,7 @@ static ParseRule rules[] = {
     [TOKEN_OR]              = {NULL,     or_,    PREC_OR},
     [TOKEN_PRINT]           = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RETURN]          = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_SUPER]           = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_SUPER]           = {super_,   NULL,   PREC_NONE},
     [TOKEN_THIS]            = {this_,    NULL,   PREC_NONE},
     [TOKEN_TRUE]            = {literal,  NULL,   PREC_NONE},
     [TOKEN_VAR]             = {NULL,     NULL,   PREC_NONE},
@@ -147,6 +149,10 @@ static Parser parser;
 static VM *compiling_vm;
 static Compiler* current;
 static ClassCompiler* current_class;
+
+// synthetic tokens for 'this' and 'super'
+static Token this_token  = { TOKEN_THIS,  "this",  4, 0 };
+static Token super_token = { TOKEN_SUPER, "super", 5, 0 };
 
 static Chunk* current_chunk() {
     return &current->fn->chunk;
@@ -240,6 +246,10 @@ static void emit_get_property(int constant, int line) {
 
 static void emit_set_property(int constant, int line) {
     current_chunk()->write_variable_length_opcode(OP_SET_PROPERTY, constant, line);
+}
+
+static void emit_get_super(int constant, int line) {
+    current_chunk()->write_variable_length_opcode(OP_GET_SUPER, constant, line);
 }
 
 static int emit_jump(uint8_t opcode, int line) {
@@ -667,6 +677,24 @@ static void this_(bool lvalue) {
     variable_helper(&parser.previous, false);  // disallow assignment to 'this'
 }
 
+static void super_(bool lvalue) {
+    if (current_class == NULL) {
+        return parser.error("Can't use 'super' outside of a class.");
+    } else if (!current_class->has_superclass) {
+        return parser.error("Can't use 'super' in a class with no superclass.");
+    }
+
+    int line = parser.line();
+    parser.consume(TOKEN_DOT, "Expect '.' after 'super'.");
+    parser.consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
+    int method_constant = make_identifier_constant(&parser.previous);
+
+    variable_helper(&this_token, false);
+    variable_helper(&super_token, false);
+
+    emit_get_super(method_constant, line);
+}
+
 static void variable(bool lvalue) {
     variable_helper(&parser.previous, lvalue);
 }
@@ -989,7 +1017,7 @@ static void class_decl() {
     int name_constant = parse_variable("Expect class name.", true);
     if (name_constant < 0) return;
 
-    Token* name_token = &parser.previous;
+    Token name_token = parser.previous;
     int line = parser.line();
 
     if (current->scope_depth > 0) {
@@ -1006,9 +1034,28 @@ static void class_decl() {
     // new scope for class compiler
     ClassCompiler class_compiler;
     class_compiler.parent = current_class;
+    class_compiler.has_superclass = false;
     current_class = &class_compiler;
 
-    variable_helper(name_token, false);
+    if (parser.match(TOKEN_LESS)) {
+        class_compiler.has_superclass = true;
+
+        parser.consume(TOKEN_IDENTIFIER, "Expect superclass name.");
+        if (identifiers_equal(&name_token, &parser.previous)) {
+            return parser.error("A class can't inherit from itself.");
+        }
+
+        // put superclass on stack, start new scope, and define 'super' to refer to it
+        variable_helper(&parser.previous, false);
+        begin_scope();
+        declare_local(&super_token);
+        define_local(current->local_count - 1);
+
+        variable_helper(&name_token, false);        // put class on stack
+        emit_byte(OP_INHERIT, parser.line());
+    }
+
+    variable_helper(&name_token, false);  // put class on stack
 
     parser.consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
     while (!parser.check(TOKEN_RIGHT_BRACE) && !parser.check(TOKEN_EOF)) {
@@ -1021,6 +1068,9 @@ static void class_decl() {
     }
 
     // pop class scope
+    if (class_compiler.has_superclass) {
+        end_scope();
+    }
     current_class = class_compiler.parent;
 }
 

@@ -95,7 +95,11 @@ RUNTIME_EXIT_CODE = 70
 fail = 0
 
 if exit_code not in [SUCCESS_EXIT_CODE, PARSER_EXIT_CODE, RUNTIME_EXIT_CODE]:
-  print(FAIL + ": Unexpected exit code: " + str(exit_code))
+  print(FAIL + ": Unexpected exit code: " + str(exit_code), end="")
+  if stderr_lines:
+    print("  " + stderr_lines[0])
+  else:
+    print()
   fail = 2
 else:
 

@@ -913,10 +913,19 @@ inline InterpretResult VM::run() {
             pop();
             break;
         }
+        case OP_INHERIT: {
+            if (!IS_CLASS(peek(1))) return runtime_error("Superclass must be a class.");
+            assert(IS_CLASS(peek(0)));
+            ObjClass* super = AS_CLASS(peek(1));
+            ObjClass* klass = AS_CLASS(peek(0));
+            klass->methods.insert_all(&super->methods);
+            pop();  // pop subclass, leave super on top
+            break;
+        }
 
         default:
-            return runtime_error("Undefined opcode: %d", inst);
-            ; // nothing
+            runtime_error("Undefined opcode: %d", inst);
+            assert(!"Undefined opcode");
         }
     }
 }
