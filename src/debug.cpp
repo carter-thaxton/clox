@@ -327,7 +327,7 @@ void print_value(Value value) {
             return;
         }
         case VAL_NUMBER: {
-            printf("%g", AS_NUMBER(value));
+            printf("%.10g", AS_NUMBER(value));
             return;
         }
         case VAL_OBJ: {
